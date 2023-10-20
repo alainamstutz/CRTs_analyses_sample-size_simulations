@@ -20,12 +20,174 @@ library(writexl)
 library(here)
 library(kableExtra)
 library(ggplot2)
+library(readr)
+library(jtools) # for summ() and plot_summs
+library(sjPlot) # for tab_model
 
+library(lmerTest) # GLMM for CRTs with cont outcome: cluster-specific model (conditional)
+library(geepack) # GEE for CRTs: population-averaged model (marginal) incl. sandwich esimtaor and exchangeable correlation structure
+library(ICC) # one-way ANOVA (analysis of variance) using mean squares within and between clusters
+library(swCRTdesign) # stepped-wedge design plot
 
 ```
 
-# 
-```{r, include=FALSE}
+# Load data
+```{r message=TRUE, warning=FALSE, include=FALSE}
+df <- read_delim("ambroisie.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+```
 
+# Parallel CRT
+```{r}
+### continous outcome (here it's not the target trial outcome, it's an intermediate outcome)
+# reformat
+df$GROUP <- as.factor(df$GROUP)
+df$CENTER <- as.factor(df$CENTER)
+
+# GLMM
+calintake.glmm <- lmer(CALBEFORE ~ (1|CENTER) + GROUP,
+                   data = df)
+tab_model(calintake.glmm)
+summ(calintake.glmm, exp = T, confint = T, model.info = T, model.fit = T, digits = 2)
+
+# GEE
+calintake.gee <- geeglm(CALBEFORE ~ GROUP,
+                   id = CENTER, data = df, corstr = "exchangeable")
+tab_model(calintake.gee)
+
+# GLMM, adjusted for BMI
+calintake.glmm.bmi <- lmer(CALBEFORE ~ (1|CENTER) + GROUP + BMI,
+                   data = df)
+tab_model(calintake.glmm.bmi)
+
+# GEE, adjusted for BMI
+calintake.gee.bmi <- geeglm(CALBEFORE ~ GROUP + BMI,
+                   id = CENTER, data = df, corstr = "exchangeable")
+tab_model(calintake.gee.bmi)
+
+# ICC from GLMM 
+ICC_unadj <- 158.9^2/(158.9^2+584.4^2) # but this is misleading, since conditioned on intervention
+ICC_adj <- 157.7^2/(157.7^2+579.8^2) # but this is misleading, since conditioned on intervention
+
+# ICC directly from GLMM withou conditioning on intervention
+calintake.glmm.uncond <- lmer(CALBEFORE ~ (1|CENTER) + 1,
+                   data = df)
+tab_model(calintake.glmm.uncond)
+
+# ICC same as from one-way ANOVA overall
+ICCest(x = CENTER, y = CALBEFORE, data =
+df, alpha = 0.05, CI.type = "THD")
+
+# Gold standard Tours: Report one-way ANOVA ICC by group
+ICCest(x = CENTER, y = CALBEFORE, data =
+df[df$GROUP == "1: Maintaining caloric intake",], alpha = 0.05, CI.type = "THD")
+ICCest(x = CENTER, y = CALBEFORE, data =
+df[df$GROUP == "2: Fasting",], alpha = 0.05, CI.type = "THD")
+
+# ICC from GEE 
+calintake.gee <- geeglm(CALBEFORE ~ GROUP,
+                   id = CENTER, data = df, corstr = "exchangeable")
+calintake.gee # See Estimated Correlation Parameters (alpha)
+
+calintake.gee.uncond <- geeglm(CALBEFORE ~ 1,
+                   id = CENTER, data = df, corstr = "exchangeable")
+calintake.gee.uncond
+
+calintake.gee.cont <- geeglm(CALBEFORE ~ 1,
+                   id = CENTER, data = df[df$GROUP == "1: Maintaining caloric intake",], 
+                   corstr = "exchangeable")
+calintake.gee.cont
+
+calintake.gee.int <- geeglm(CALBEFORE ~ 1,
+                   id = CENTER, data = df[df$GROUP == "2: Fasting",], 
+                   corstr = "exchangeable")
+calintake.gee.int
+
+### binary outcome (the target trial outcome)
+df <- df %>%
+  mutate(outcome = case_when(INTUBATIONJ7 == 0 & DEATHJ7 == 0 ~ 0,
+                             INTUBATIONJ7 == 1 | DEATHJ7 == 1 ~ 1))
+
+# GLMM
+outcome.glmm <- glmer(outcome ~ (1|CENTER) + GROUP,
+                   data = df, family = "binomial")
+tab_model(outcome.glmm)
+
+# GEE
+outcome.gee <- geeglm(outcome ~ GROUP,
+                   id = CENTER, data = df, corstr = "exchangeable", family = "binomial")
+tab_model(outcome.gee)
+
+# GLMM, adjusted for BMI
+outcome.glmm.bmi <- glmer(outcome ~ (1|CENTER) + GROUP + BMI,
+                   data = df, family = "binomial")
+tab_model(outcome.glmm.bmi)
+
+# GEE, adjusted for BMI
+outcome.gee.bmi <- geeglm(outcome ~ GROUP + BMI,
+                   id = CENTER, data = df, corstr = "exchangeable", family = "binomial")
+tab_model(outcome.gee.bmi)
+
+# Gold standard Tours: Report one-way ANOVA ICC by group // GLMM
+ICCest(x = CENTER, y = outcome, data =
+df[df$GROUP == "1: Maintaining caloric intake",], alpha = 0.05, CI.type = "THD")
+ICCest(x = CENTER, y = outcome, data =
+df[df$GROUP == "2: Fasting",], alpha = 0.05, CI.type = "THD")
+## overall ICC (but conditioned on the intervention!)
+ICCest(x = CENTER, y = outcome, data =
+df, alpha = 0.05, CI.type = "THD")
+
+# Gold standard Tours: Report one-way ANOVA ICC by group // GEE
+calintake.gee.cont <- geeglm(outcome ~ 1,
+                   id = CENTER, data = df[df$GROUP == "1: Maintaining caloric intake",], 
+                   corstr = "exchangeable", family = "binomial")
+calintake.gee.cont
+
+calintake.gee.int <- geeglm(outcome ~ 1,
+                   id = CENTER, data = df[df$GROUP == "2: Fasting",], 
+                   corstr = "exchangeable", family = "binomial")
+calintake.gee.int
 
 ```
+# SMART stepped-wedge CRT
+```{r message=FALSE, warning=FALSE}
+df <- read_delim("SMART.csv", delim = ";", 
+    escape_double = FALSE, trim_ws = TRUE)
+
+```
+# Binary outcome (primary outcome)
+```{r}
+# reformat
+df$primary_event <- as.factor(df$primary_event)
+df$phc_code <- as.factor(df$phc_code)
+df$TRT <- as.factor(df$TRT)
+df$PHASE_factor <- as.factor(df$PHASE)
+df$phc_code_modif <- as.factor(df$phc_code_modif)
+df <- df %>%
+  mutate(primary_event_num = case_when(primary_event == "No" ~ 0,
+                             primary_event == "Yes" ~ 1))
+df <- df %>%
+  mutate(TRT_num = case_when(TRT == "Control" ~ 0,
+                             TRT == "Intervention" ~ 1))
+
+# SW plot
+swPlot(EQUK_change, TRT_num, PHASE, phc_code_modif, df, by.wave=FALSE,
+       combined.plot=FALSE, 
+       choose.tx.pos="bottomright",
+       choose.legend.pos="bottom")
+
+# table(df$PHASE,df$TRT)
+# table(df$block,df$TRT) # block = sequence = randomised - but is not used! 
+
+# GLMM
+outcome.glmm <- glmer(primary_event ~ (1|phc_code) + TRT + PHASE_factor,
+                   data = df, family = "binomial")
+tab_model(outcome.glmm)
+
+# GEE
+outcome.gee <- geeglm(primary_event_num ~ TRT + PHASE_factor,
+                   id = phc_code, data = df, corstr = "exchangeable", family = "binomial")
+tab_model(outcome.gee)
+
+```
+
