@@ -189,6 +189,6 @@ tab_model(outcome.glmm)
 outcome.gee <- geeglm(primary_event_num ~ TRT + PHASE_factor,
                    id = phc_code, data = df, corstr = "exchangeable", family = "binomial")
 tab_model(outcome.gee)
-
+#Note
 ```
 
