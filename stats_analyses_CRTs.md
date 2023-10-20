@@ -38,11 +38,12 @@ library(swCRTdesign) # stepped-wedge design plot
 
 ```r
 ### continous outcome (here it's not the target trial outcome, it's an intermediate outcome)
+## ambroise trial, standard two group CRT, cohort sampling (the same people recruited and assessed, but only assessed once, at the end)
 # reformat
 df$GROUP <- as.factor(df$GROUP)
 df$CENTER <- as.factor(df$CENTER)
 
-# GLMM
+# GLMM 
 calintake.glmm <- lmer(CALBEFORE ~ (1|CENTER) + GROUP,
                    data = df)
 tab_model(calintake.glmm)
@@ -1185,5 +1186,10 @@ tab_model(outcome.gee)
 </tr>
 
 </table>
+
+```r
+#Note
+```
+
 ![](stats_analyses_CRTs_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
 
