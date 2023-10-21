@@ -14,9 +14,8 @@ output:
 
 # Analyses of cluster randomized trials (CRTs) including stepped-wedge cluster randomized trials (SW-CRTs)
 This is an (incomplete) excerpt from an Inserm France workshop, prepared and taught by the wonderful team in Tours and Bordeaux (Bruno Giraudeau, Laurent Billot, Agnès Caille and several of their PhD students).
-For SW-CRTs, check out: https://steppedwedgehog.blog/what-is-a-stepped-wedge-trial/ 
 
-## There are two general ways how to analyse CRTs: 
+## There are two general ways to analyse CRTs
 1. On cluster level ("cluster level = unit of analysis")
 This is done simply by comparing cluster level data (or aggregating individual level data on cluster level) across arms using simple tests (t-test, Wilcoxon, etc.). Recommended if total number of cluster small, i.e., below ~ 10.
 2. On individual level ("individual level = unit of analysis")
@@ -25,16 +24,16 @@ There are two approaches:
 * Using cluster-specific models, i.e., mixed-models (GLMM): Interpretation: effect if an individual moves from a control CLUSTER to intervention CLUSTER. -> conditional effect
 * Using population-averaged models, i.e., Generalized estimating equations (GEE): Interpretation: effect if an individual from the target population moves from control to intervention. -> marginal effect
 There is an entire literature on when/how to use both of these models, and their benefit/challenges, most use mixed-models. "GEE expert": Liz Turner (https://scholars.duke.edu/person/liz.turner/publications)
-3. The same is true for SW-CRT, but more complex. In addition you need to account for time and the correlation structure is more complex.
+3. The same is true for SW-CRT, but more complex. In addition you need to account for time and the correlation structure is more complex. Check out: https://steppedwedgehog.blog/what-is-a-stepped-wedge-trial/
 
 ## ICC reporting
-1. It is good practice to report the ICC (and its 95%CI) in the results publication of a CRT, at least for the primary outcome, better, for all outcomes. In order for other trialists to use it, see e.g. ICC database: https://monash-biostat.shinyapps.io/CLOUDbank/
+1. It is good practice to report the ICC (and its 95%CI) in the results publication of a CRT, at least for the primary outcome, better, for all outcomes. For other trialists to use it, see e.g., ICC database: https://monash-biostat.shinyapps.io/CLOUDbank/
 2. It is good practice to report the ICC by arm.
-3. There are several ways how to calculate the ICC, most straight-forward way is one-way ANOVA by group
+3. There are several ways how to calculate the ICC, most straight-forward way is using one-way ANOVA by group
 
 ## Parallel CRT with baseline period
 1. "A common enhancement of a simple parallel CRT is to add an assessment of participants’ outcomes in a baseline period (before randomisation). Even if different participants are assessed at baseline and follow-up [i.e. cross-sectional sampling], the fact that they are sampled from the same cluster allows some control for cluster differences." -> https://www.bmj.com/content/360/bmj.k1121.long 
-2. This is illustratively shown in the sample size calculator: https://clusterrcts.shinyapps.io/rshinyapp/ (switch between "Parallel" and "Parallel with baseline measure") and can yield a substantial increase in power! See last chapter below.
+2. This is illustratively shown in the sample size calculator: https://clusterrcts.shinyapps.io/rshinyapp/ (switch between "Parallel" and "Parallel with baseline measure") -> can yield a substantial increase in power! See last chapter below.
 
 # Load packages
 
