@@ -12,40 +12,71 @@ output:
     toc: yes
 ---
 
+# Analyses of cluster randomized trials (CRTs) including stepped-wedge cluster randomized trials (SW-CRTs)
+This is an (incomplete) excerpt from an Inserm France workshop, prepared and taught by the wonderful team in Tours and Bordeaux (Bruno Giraudeau, Laurent Billot, Agnès Caille and several of their PhD students).
+For SW-CRTs, check out: https://steppedwedgehog.blog/what-is-a-stepped-wedge-trial/ 
+
+## There are two general ways how to analyse CRTs: 
+1. On cluster level ("cluster level = unit of analysis")
+This is done simply by comparing cluster level data (or aggregating individual level data on cluster level) across arms using simple tests (t-test, Wilcoxon, etc.). Recommended if total number of cluster small, i.e., below ~ 10.
+2. On individual level ("individual level = unit of analysis")
+This is more powerful and more flexible. And recommended when there are enough clusters.
+There are two approaches:
+* Using cluster-specific models, i.e., mixed-models (GLMM): Interpretation: effect if an individual moves from a control CLUSTER to intervention CLUSTER. -> conditional effect
+* Using population-averaged models, i.e., Generalized estimating equations (GEE): Interpretation: effect if an individual from the target population moves from control to intervention. -> marginal effect
+There is an entire literature on when/how to use both of these models, and their benefit/challenges, most use mixed-models. "GEE expert": Liz Turner (https://scholars.duke.edu/person/liz.turner/publications)
+3. The same is true for SW-CRT, but more complex. In addition you need to account for time and the correlation structure is more complex.
+
+## ICC reporting
+1. It is good practice to report the ICC (and its 95%CI) in the results publication of a CRT, at least for the primary outcome, better, for all outcomes. In order for other trialists to use it, see e.g. ICC database: https://monash-biostat.shinyapps.io/CLOUDbank/
+2. It is good practice to report the ICC by arm.
+3. There are several ways how to calculate the ICC, most straight-forward way is one-way ANOVA by group
+
+## Parallel CRT with baseline period
+1. "A common enhancement of a simple parallel CRT is to add an assessment of participants’ outcomes in a baseline period (before randomisation). Even if different participants are assessed at baseline and follow-up [i.e. cross-sectional sampling], the fact that they are sampled from the same cluster allows some control for cluster differences." -> https://www.bmj.com/content/360/bmj.k1121.long 
+2. This is illustratively shown in the sample size calculator: https://clusterrcts.shinyapps.io/rshinyapp/ (switch between "Parallel" and "Parallel with baseline measure") and can yield a substantial increase in power! See last chapter below.
+
 # Load packages
 
 ```r
 library(tidyverse)
-library(readxl)
-library(writexl)
 library(here)
-library(kableExtra)
-library(ggplot2)
 library(readr)
-library(jtools) # for summ() and plot_summs
-library(sjPlot) # for tab_model
+library(sjPlot) # for tab_model()
 
 library(lmerTest) # GLMM for CRTs with cont outcome: cluster-specific model (conditional)
-library(geepack) # GEE for CRTs: population-averaged model (marginal) incl. sandwich esimtaor and exchangeable correlation structure
-library(ICC) # one-way ANOVA (analysis of variance) using mean squares within and between clusters
+library(geepack) # GEE for CRTs: population-averaged model (marginal) incl. sandwich estimator and exchangeable correlation structure
+library(ICC) # one-way ANOVA for the calculation of the ICC, using mean squares within and between clusters
 library(swCRTdesign) # stepped-wedge design plot
 ```
 
-# Load data
-
-
 # Parallel CRT
+We want to evaluate the impact of a 6-hours fasting period prior to extubation in mechanically ventilated intensive care patients. To this end, the AMBROISIE study has been set up. The "ambroisie.csv" database contains some of the variables collected as part of this trial. Patients are included in the study at the time of the medical decision to extubate. The primary endpoint was extubation failure (reintubation or death within 7 days of extubation). Caloric intake on the day before extubation was also recorded.
+Sampling frame: cohort sampling (the same people recruited and followed up, but only assessed once, at the end)
+
+## Variable description
+1. CENTER : Center
+2. PATIENT : Patient number in corresponding center
+3. GROUP : Center randomization group
+4. BMI : BMI
+5. CALBEFORE : Caloric intake the day before extubation (kcal)
+6. INTUBATIONJ7 : Reintubation before D7
+7. DEATHJ7 : Death on D7
+8. UNIVERSITY : University hospitals or not (stratification variable at the cluster level)
+
+## Load data
+
+
+## Continuous outcome
 
 ```r
-### continous outcome (here it's not the target trial outcome, it's an intermediate outcome)
-## ambroise trial, standard two group CRT, cohort sampling (the same people recruited and assessed, but only assessed once, at the end)
 # reformat
 df$GROUP <- as.factor(df$GROUP)
 df$CENTER <- as.factor(df$CENTER)
 
+## Use outcome CALBEFORE: An intermediate outcome, on the causal pathway between randomisation and target outcome
 # GLMM 
-calintake.glmm <- lmer(CALBEFORE ~ (1|CENTER) + GROUP,
-                   data = df)
+calintake.glmm <- lmer(CALBEFORE ~ (1|CENTER) + GROUP, data = df)
 tab_model(calintake.glmm)
 ```
 
@@ -104,122 +135,9 @@ tab_model(calintake.glmm)
 </table>
 
 ```r
-summ(calintake.glmm, exp = T, confint = T, model.info = T, model.fit = T, digits = 2)
-```
-
-<table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
-<tbody>
-  <tr>
-   <td style="text-align:left;font-weight: bold;"> Observations </td>
-   <td style="text-align:right;"> 1130 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;font-weight: bold;"> Dependent variable </td>
-   <td style="text-align:right;"> CALBEFORE </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;font-weight: bold;"> Type </td>
-   <td style="text-align:right;"> Mixed effects linear regression </td>
-  </tr>
-</tbody>
-</table> <table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
-<tbody>
-  <tr>
-   <td style="text-align:left;font-weight: bold;"> AIC </td>
-   <td style="text-align:right;"> 17624.18 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;font-weight: bold;"> BIC </td>
-   <td style="text-align:right;"> 17644.30 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;font-weight: bold;"> Pseudo-R² (fixed effects) </td>
-   <td style="text-align:right;"> 0.05 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;font-weight: bold;"> Pseudo-R² (total) </td>
-   <td style="text-align:right;"> 0.12 </td>
-  </tr>
-</tbody>
-</table> <table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;border-bottom: 0;">
- <thead>
-<tr><th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="7"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">Fixed Effects</div></th></tr>
-  <tr>
-   <th style="text-align:left;">   </th>
-   <th style="text-align:right;"> exp(Est.) </th>
-   <th style="text-align:right;"> 2.5% </th>
-   <th style="text-align:right;"> 97.5% </th>
-   <th style="text-align:right;"> t val. </th>
-   <th style="text-align:right;"> d.f. </th>
-   <th style="text-align:right;"> p </th>
-  </tr>
- </thead>
-<tbody>
-  <tr>
-   <td style="text-align:left;font-weight: bold;"> (Intercept) </td>
-   <td style="text-align:right;"> Inf </td>
-   <td style="text-align:right;"> Inf </td>
-   <td style="text-align:right;"> Inf </td>
-   <td style="text-align:right;"> 32.95 </td>
-   <td style="text-align:right;"> 19.54 </td>
-   <td style="text-align:right;"> 0.00 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;font-weight: bold;"> GROUP2: Fasting </td>
-   <td style="text-align:right;"> 0.00 </td>
-   <td style="text-align:right;"> 0.00 </td>
-   <td style="text-align:right;"> 0.00 </td>
-   <td style="text-align:right;"> -3.67 </td>
-   <td style="text-align:right;"> 20.60 </td>
-   <td style="text-align:right;"> 0.00 </td>
-  </tr>
-</tbody>
-<tfoot><tr><td style="padding: 0; " colspan="100%">
-<sup></sup>  p values calculated using Satterthwaite d.f. </td></tr></tfoot>
-</table> <table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
- <thead>
-<tr><th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">Random Effects</div></th></tr>
-  <tr>
-   <th> Group </th>
-   <th> Parameter </th>
-   <th> Std. Dev. </th>
-  </tr>
- </thead>
-<tbody>
-  <tr>
-   <td> CENTER </td>
-   <td> (Intercept) </td>
-   <td> 158.92 </td>
-  </tr>
-  <tr>
-   <td> Residual </td>
-   <td>  </td>
-   <td> 584.43 </td>
-  </tr>
-</tbody>
-</table> <table class="table table-striped table-hover table-condensed table-responsive" style="width: auto !important; margin-left: auto; margin-right: auto;">
- <thead>
-<tr><th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3"><div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">Grouping Variables</div></th></tr>
-  <tr>
-   <th> Group </th>
-   <th> # groups </th>
-   <th> ICC </th>
-  </tr>
- </thead>
-<tbody>
-  <tr>
-   <td> CENTER </td>
-   <td> 22 </td>
-   <td> 0.07 </td>
-  </tr>
-</tbody>
-</table>
-
-```r
 # GEE
-calintake.gee <- geeglm(CALBEFORE ~ GROUP,
-                   id = CENTER, data = df, corstr = "exchangeable")
-tab_model(calintake.gee)
+calintake.gee <- geeglm(CALBEFORE ~ GROUP, id = CENTER, data = df, corstr = "exchangeable")
+tab_model(calintake.gee) # same as GLMM
 ```
 
 <table style="border-collapse:collapse; border:none;">
@@ -258,181 +176,19 @@ tab_model(calintake.gee)
 
 ```r
 # GLMM, adjusted for BMI
-calintake.glmm.bmi <- lmer(CALBEFORE ~ (1|CENTER) + GROUP + BMI,
-                   data = df)
-tab_model(calintake.glmm.bmi)
-```
-
-<table style="border-collapse:collapse; border:none;">
-<tr>
-<th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; ">&nbsp;</th>
-<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">CALBEFORE</th>
-</tr>
-<tr>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; ">Predictors</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">Estimates</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">CI</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">p</td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">(Intercept)</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1446.65</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1267.28&nbsp;&ndash;&nbsp;1626.01</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">GROUP2 × Fasting</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">&#45;287.95</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">&#45;438.75&nbsp;&ndash;&nbsp;-137.15</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">BMI</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">11.93</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">6.58&nbsp;&ndash;&nbsp;17.27</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
-</tr>
-<tr>
-<td colspan="4" style="font-weight:bold; text-align:left; padding-top:.8em;">Random Effects</td>
-</tr>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&sigma;<sup>2</sup></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">336145.45</td>
-</tr>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&tau;<sub>00</sub> <sub>CENTER</sub></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">24864.71</td>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">ICC</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.07</td>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>CENTER</sub></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">22</td>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;">Observations</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3">1130</td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">Marginal R<sup>2</sup> / Conditional R<sup>2</sup></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.067 / 0.131</td>
-</tr>
-
-</table>
-
-```r
+calintake.glmm.bmi <- lmer(CALBEFORE ~ (1|CENTER) + GROUP + BMI, data = df)
 # GEE, adjusted for BMI
-calintake.gee.bmi <- geeglm(CALBEFORE ~ GROUP + BMI,
-                   id = CENTER, data = df, corstr = "exchangeable")
-tab_model(calintake.gee.bmi)
-```
+calintake.gee.bmi <- geeglm(CALBEFORE ~ GROUP + BMI, id = CENTER, data = df, corstr = "exchangeable")
 
-<table style="border-collapse:collapse; border:none;">
-<tr>
-<th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; ">&nbsp;</th>
-<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">CALBEFORE</th>
-</tr>
-<tr>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; ">Predictors</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">Estimates</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">CI</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">p</td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">(Intercept)</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1446.40</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1253.03&nbsp;&ndash;&nbsp;1639.76</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">GROUP2 × Fasting</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">&#45;288.04</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">&#45;431.58&nbsp;&ndash;&nbsp;-144.50</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">BMI</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">11.93</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">5.35&nbsp;&ndash;&nbsp;18.52</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
-</tr>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>CENTER</sub></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">22</td>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;">Observations</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3">1130</td>
-</tr>
-
-</table>
-
-```r
-# ICC from GLMM 
-ICC_unadj <- 158.9^2/(158.9^2+584.4^2) # but this is misleading, since conditioned on intervention
-ICC_adj <- 157.7^2/(157.7^2+579.8^2) # but this is misleading, since conditioned on intervention
-
-# ICC directly from GLMM withou conditioning on intervention
+# ICC directly from GLMM model
+ICC_BMI_unadj <- 158.9^2/(158.9^2+584.4^2) # but this is misleading, since conditioned on intervention!
+ICC_BMI_adj <- 157.7^2/(157.7^2+579.8^2) # but this is misleading, since conditioned on intervention!
+# => ICC directly from GLMM without conditioning on intervention
 calintake.glmm.uncond <- lmer(CALBEFORE ~ (1|CENTER) + 1,
                    data = df)
-tab_model(calintake.glmm.uncond)
-```
-
-<table style="border-collapse:collapse; border:none;">
-<tr>
-<th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; ">&nbsp;</th>
-<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">CALBEFORE</th>
-</tr>
-<tr>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; ">Predictors</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">Estimates</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">CI</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">p</td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">(Intercept)</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1634.37</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1538.81&nbsp;&ndash;&nbsp;1729.93</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
-</tr>
-<tr>
-<td colspan="4" style="font-weight:bold; text-align:left; padding-top:.8em;">Random Effects</td>
-</tr>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&sigma;<sup>2</sup></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">341635.74</td>
-</tr>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&tau;<sub>00</sub> <sub>CENTER</sub></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">44264.67</td>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">ICC</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.11</td>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>CENTER</sub></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">22</td>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;">Observations</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3">1130</td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">Marginal R<sup>2</sup> / Conditional R<sup>2</sup></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.000 / 0.115</td>
-</tr>
-
-</table>
-
-```r
-# ICC same as from one-way ANOVA overall
-ICCest(x = CENTER, y = CALBEFORE, data =
-df, alpha = 0.05, CI.type = "THD")
+ICC_BMI_unadj_uncond <- 210.4^2/(210.4^2+584.5^2) # but this does not provide 95%CI, and is not by group
+# However, it is the same ICC as from one-way ANOVA overall
+ICCest(x = CENTER, y = CALBEFORE, data = df, alpha = 0.05, CI.type = "THD") # ~ same as above, ICC ~ 0.11
 ```
 
 ```
@@ -459,14 +215,8 @@ df, alpha = 0.05, CI.type = "THD")
 ```
 
 ```r
-# Gold standard Tours: Report one-way ANOVA ICC by group
-ICCest(x = CENTER, y = CALBEFORE, data =
-df[df$GROUP == "1: Maintaining caloric intake",], alpha = 0.05, CI.type = "THD")
-```
-
-```
-## Warning in ICCest(x = CENTER, y = CALBEFORE, data = df[df$GROUP == "1:
-## Maintaining caloric intake", : Missing levels of 'x' have been removed
+# One-way ANOVA ICC by group -> Gold standard to report ICC by group
+ICCest(x = CENTER, y = CALBEFORE, data = df[df$GROUP == "1: Maintaining caloric intake",], alpha = 0.05, CI.type = "THD") # ICC control group
 ```
 
 ```
@@ -493,13 +243,7 @@ df[df$GROUP == "1: Maintaining caloric intake",], alpha = 0.05, CI.type = "THD")
 ```
 
 ```r
-ICCest(x = CENTER, y = CALBEFORE, data =
-df[df$GROUP == "2: Fasting",], alpha = 0.05, CI.type = "THD")
-```
-
-```
-## Warning in ICCest(x = CENTER, y = CALBEFORE, data = df[df$GROUP == "2:
-## Fasting", : Missing levels of 'x' have been removed
+ICCest(x = CENTER, y = CALBEFORE, data = df[df$GROUP == "2: Fasting",], alpha = 0.05, CI.type = "THD") # ICC intervention group
 ```
 
 ```
@@ -526,38 +270,9 @@ df[df$GROUP == "2: Fasting",], alpha = 0.05, CI.type = "THD")
 ```
 
 ```r
-# ICC from GEE 
-calintake.gee <- geeglm(CALBEFORE ~ GROUP,
-                   id = CENTER, data = df, corstr = "exchangeable")
-calintake.gee # See Estimated Correlation Parameters (alpha)
-```
-
-```
-## 
-## Call:
-## geeglm(formula = CALBEFORE ~ GROUP, data = df, id = CENTER, corstr = "exchangeable")
-## 
-## Coefficients:
-##     (Intercept) GROUP2: Fasting 
-##       1771.5244       -284.1371 
-## 
-## Degrees of Freedom: 1130 Total (i.e. Null);  1128 Residual
-## 
-## Scale Link:                   identity
-## Estimated Scale Parameters:  [1] 364565.1
-## 
-## Correlation:  Structure = exchangeable    Link = identity 
-## Estimated Correlation Parameters:
-##      alpha 
-## 0.06393256 
-## 
-## Number of clusters:   22   Maximum cluster size: 70
-```
-
-```r
-calintake.gee.uncond <- geeglm(CALBEFORE ~ 1,
-                   id = CENTER, data = df, corstr = "exchangeable")
-calintake.gee.uncond
+# ICC from GEE model
+calintake.gee.uncond <- geeglm(CALBEFORE ~ 1, id = CENTER, data = df, corstr = "exchangeable")
+calintake.gee.uncond # See Estimated Correlation Parameters (alpha), the same: ICC ~ 0.11 // 95%CI ?
 ```
 
 ```
@@ -583,74 +298,20 @@ calintake.gee.uncond
 ```
 
 ```r
-calintake.gee.cont <- geeglm(CALBEFORE ~ 1,
-                   id = CENTER, data = df[df$GROUP == "1: Maintaining caloric intake",], 
-                   corstr = "exchangeable")
-calintake.gee.cont
+calintake.gee.uncond.cont <- geeglm(CALBEFORE ~ 1, id = CENTER, data = df[df$GROUP == "1: Maintaining caloric intake",], corstr = "exchangeable") # ICC control group
+calintake.gee.uncond.int <- geeglm(CALBEFORE ~ 1, id = CENTER, data = df[df$GROUP == "2: Fasting",], corstr = "exchangeable") # ICC intervention group
 ```
 
-```
-## 
-## Call:
-## geeglm(formula = CALBEFORE ~ 1, data = df[df$GROUP == "1: Maintaining caloric intake", 
-##     ], id = CENTER, corstr = "exchangeable")
-## 
-## Coefficients:
-## (Intercept) 
-##    1771.879 
-## 
-## Degrees of Freedom: 617 Total (i.e. Null);  616 Residual
-## 
-## Scale Link:                   identity
-## Estimated Scale Parameters:  [1] 348170.2
-## 
-## Correlation:  Structure = exchangeable    Link = identity 
-## Estimated Correlation Parameters:
-##     alpha 
-## 0.0793951 
-## 
-## Number of clusters:   11   Maximum cluster size: 70
-```
+## Binary outcome
 
 ```r
-calintake.gee.int <- geeglm(CALBEFORE ~ 1,
-                   id = CENTER, data = df[df$GROUP == "2: Fasting",], 
-                   corstr = "exchangeable")
-calintake.gee.int
-```
-
-```
-## 
-## Call:
-## geeglm(formula = CALBEFORE ~ 1, data = df[df$GROUP == "2: Fasting", 
-##     ], id = CENTER, corstr = "exchangeable")
-## 
-## Coefficients:
-## (Intercept) 
-##    1486.321 
-## 
-## Degrees of Freedom: 513 Total (i.e. Null);  512 Residual
-## 
-## Scale Link:                   identity
-## Estimated Scale Parameters:  [1] 384278.3
-## 
-## Correlation:  Structure = exchangeable    Link = identity 
-## Estimated Correlation Parameters:
-##      alpha 
-## 0.04577461 
-## 
-## Number of clusters:   11   Maximum cluster size: 70
-```
-
-```r
-### binary outcome (the target trial outcome)
-df <- df %>%
+## binary outcome: Reintubation or death (the target trial outcome)
+df <- df %>% # Create the variable outcome, which is equal to 1 for failure and 0 for success. => "Failure rate"
   mutate(outcome = case_when(INTUBATIONJ7 == 0 & DEATHJ7 == 0 ~ 0,
                              INTUBATIONJ7 == 1 | DEATHJ7 == 1 ~ 1))
 
-# GLMM
-outcome.glmm <- glmer(outcome ~ (1|CENTER) + GROUP,
-                   data = df, family = "binomial")
+# GLMM, the effect of the intervention on the failure rate
+outcome.glmm <- glmer(outcome ~ (1|CENTER) + GROUP, data = df, family = "binomial")
 tab_model(outcome.glmm)
 ```
 
@@ -709,10 +370,9 @@ tab_model(outcome.glmm)
 </table>
 
 ```r
-# GEE
-outcome.gee <- geeglm(outcome ~ GROUP,
-                   id = CENTER, data = df, corstr = "exchangeable", family = "binomial")
-tab_model(outcome.gee)
+# GEE, the effect of the intervention on the failure rate
+outcome.gee <- geeglm(outcome ~ GROUP, id = CENTER, data = df, corstr = "exchangeable", family = "binomial")
+tab_model(outcome.gee) # same result as GLMM
 ```
 
 <table style="border-collapse:collapse; border:none;">
@@ -751,127 +411,12 @@ tab_model(outcome.gee)
 
 ```r
 # GLMM, adjusted for BMI
-outcome.glmm.bmi <- glmer(outcome ~ (1|CENTER) + GROUP + BMI,
-                   data = df, family = "binomial")
-tab_model(outcome.glmm.bmi)
-```
-
-<table style="border-collapse:collapse; border:none;">
-<tr>
-<th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; ">&nbsp;</th>
-<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">outcome</th>
-</tr>
-<tr>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; ">Predictors</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">Odds Ratios</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">CI</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">p</td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">(Intercept)</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.45</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.22&nbsp;&ndash;&nbsp;0.94</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>0.033</strong></td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">GROUP2 × Fasting</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.04</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.76&nbsp;&ndash;&nbsp;1.42</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.823</td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">BMI</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.97</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.95&nbsp;&ndash;&nbsp;1.00</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>0.029</strong></td>
-</tr>
-<tr>
-<td colspan="4" style="font-weight:bold; text-align:left; padding-top:.8em;">Random Effects</td>
-</tr>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&sigma;<sup>2</sup></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">3.29</td>
-</tr>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&tau;<sub>00</sub> <sub>CENTER</sub></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.00</td>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">ICC</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.00</td>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>CENTER</sub></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">22</td>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;">Observations</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3">1130</td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">Marginal R<sup>2</sup> / Conditional R<sup>2</sup></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.010 / 0.012</td>
-</tr>
-
-</table>
-
-```r
+outcome.glmm.bmi <- glmer(outcome ~ (1|CENTER) + GROUP + BMI, data = df, family = "binomial")
 # GEE, adjusted for BMI
-outcome.gee.bmi <- geeglm(outcome ~ GROUP + BMI,
-                   id = CENTER, data = df, corstr = "exchangeable", family = "binomial")
-tab_model(outcome.gee.bmi)
-```
+outcome.gee.bmi <- geeglm(outcome ~ GROUP + BMI, id = CENTER, data = df, corstr = "exchangeable", family = "binomial")
 
-<table style="border-collapse:collapse; border:none;">
-<tr>
-<th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; ">&nbsp;</th>
-<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">outcome</th>
-</tr>
-<tr>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; ">Predictors</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">Odds Ratios</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">CI</td>
-<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">p</td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">(Intercept)</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.45</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.22&nbsp;&ndash;&nbsp;0.94</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>0.033</strong></td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">GROUP2 × Fasting</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.04</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.76&nbsp;&ndash;&nbsp;1.42</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.822</td>
-</tr>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">BMI</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.97</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.95&nbsp;&ndash;&nbsp;1.00</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>0.031</strong></td>
-</tr>
-
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>CENTER</sub></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">22</td>
-<tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;">Observations</td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3">1130</td>
-</tr>
-
-</table>
-
-```r
-# Gold standard Tours: Report one-way ANOVA ICC by group // GLMM
-ICCest(x = CENTER, y = outcome, data =
-df[df$GROUP == "1: Maintaining caloric intake",], alpha = 0.05, CI.type = "THD")
-```
-
-```
-## Warning in ICCest(x = CENTER, y = outcome, data = df[df$GROUP == "1:
-## Maintaining caloric intake", : Missing levels of 'x' have been removed
+# Gold standard: Report one-way ANOVA ICC by group // GLMM
+ICCest(x = CENTER, y = outcome, data = df[df$GROUP == "1: Maintaining caloric intake",], alpha = 0.05, CI.type = "THD")
 ```
 
 ```
@@ -898,13 +443,7 @@ df[df$GROUP == "1: Maintaining caloric intake",], alpha = 0.05, CI.type = "THD")
 ```
 
 ```r
-ICCest(x = CENTER, y = outcome, data =
-df[df$GROUP == "2: Fasting",], alpha = 0.05, CI.type = "THD")
-```
-
-```
-## Warning in ICCest(x = CENTER, y = outcome, data = df[df$GROUP == "2: Fasting",
-## : Missing levels of 'x' have been removed
+ICCest(x = CENTER, y = outcome, data = df[df$GROUP == "2: Fasting",], alpha = 0.05, CI.type = "THD")
 ```
 
 ```
@@ -932,8 +471,7 @@ df[df$GROUP == "2: Fasting",], alpha = 0.05, CI.type = "THD")
 
 ```r
 ## overall ICC (but conditioned on the intervention!)
-ICCest(x = CENTER, y = outcome, data =
-df, alpha = 0.05, CI.type = "THD")
+ICCest(x = CENTER, y = outcome, data = df, alpha = 0.05, CI.type = "THD")
 ```
 
 ```
@@ -960,106 +498,65 @@ df, alpha = 0.05, CI.type = "THD")
 ```
 
 ```r
-# Gold standard Tours: Report one-way ANOVA ICC by group // GEE
-calintake.gee.cont <- geeglm(outcome ~ 1,
-                   id = CENTER, data = df[df$GROUP == "1: Maintaining caloric intake",], 
-                   corstr = "exchangeable", family = "binomial")
-calintake.gee.cont
+# Gold standard: Report one-way ANOVA ICC by group // GEE
+calintake.gee.uncond.cont <- geeglm(outcome ~ 1, id = CENTER, data = df[df$GROUP == "1: Maintaining caloric intake",], corstr = "exchangeable", family = "binomial")
+calintake.gee.uncond.int <- geeglm(outcome ~ 1, id = CENTER, data = df[df$GROUP == "2: Fasting",], corstr = "exchangeable", family = "binomial")
 ```
 
-```
-## 
-## Call:
-## geeglm(formula = outcome ~ 1, family = "binomial", data = df[df$GROUP == 
-##     "1: Maintaining caloric intake", ], id = CENTER, corstr = "exchangeable")
-## 
-## Coefficients:
-## (Intercept) 
-##   -1.571701 
-## 
-## Degrees of Freedom: 617 Total (i.e. Null);  616 Residual
-## 
-## Scale Link:                   identity
-## Estimated Scale Parameters:  [1] 0.9991937
-## 
-## Correlation:  Structure = exchangeable    Link = identity 
-## Estimated Correlation Parameters:
-##       alpha 
-## 0.001831601 
-## 
-## Number of clusters:   11   Maximum cluster size: 70
-```
+# SW-CRTs
+Trial publication: https://pubmed.ncbi.nlm.nih.gov/30913216/
 
-```r
-calintake.gee.int <- geeglm(outcome ~ 1,
-                   id = CENTER, data = df[df$GROUP == "2: Fasting",], 
-                   corstr = "exchangeable", family = "binomial")
-calintake.gee.int
-```
+## Variable description
+1. phc_code: Eighteen primary health centre (1 to 18), CLUSTER
+2. PHASE: Time Period (1=6months, 2=12months, 3=18months, 4=24months) // "VERTICAL"
+3. block: 3 sequences, each includes 6 PHCs, unit of randomization // "HORIZONTAL"
+4. TRT:	Treatment allocation
+5. primary_event:	primary, binary, outcome (SBP<140mmHg)
+6. EQUK_change:	EQUK change from baseline to endline (a secondary, cont, outcome)
 
-```
-## 
-## Call:
-## geeglm(formula = outcome ~ 1, family = "binomial", data = df[df$GROUP == 
-##     "2: Fasting", ], id = CENTER, corstr = "exchangeable")
-## 
-## Coefficients:
-## (Intercept) 
-##   -1.544237 
-## 
-## Degrees of Freedom: 513 Total (i.e. Null);  512 Residual
-## 
-## Scale Link:                   identity
-## Estimated Scale Parameters:  [1] 0.9978467
-## 
-## Correlation:  Structure = exchangeable    Link = identity 
-## Estimated Correlation Parameters:
-##       alpha 
-## 0.003592642 
-## 
-## Number of clusters:   11   Maximum cluster size: 70
-```
-# SMART stepped-wedge CRT
+## Load data
 
 ```r
 df <- read_delim("SMART.csv", delim = ";", 
     escape_double = FALSE, trim_ws = TRUE)
 ```
-# Binary outcome (primary outcome)
+
+## Binary outcome (primary outcome)
 
 ```r
 # reformat
-df$primary_event <- as.factor(df$primary_event)
-df$phc_code <- as.factor(df$phc_code)
-df$TRT <- as.factor(df$TRT)
-df$PHASE_factor <- as.factor(df$PHASE)
-df$phc_code_modif <- as.factor(df$phc_code_modif)
+df$primary_event_f <- as.factor(df$primary_event)
+df$TRT_f <- as.factor(df$TRT)
+df$PHASE_f <- as.factor(df$PHASE)
+
+df$phc_code <- as.factor(df$phc_code) # always a factor
+df$phc_code_modif <- as.factor(df$phc_code_modif) # only used for the SWplot
+
 df <- df %>%
-  mutate(primary_event_num = case_when(primary_event == "No" ~ 0,
+  mutate(primary_event_n = case_when(primary_event == "No" ~ 0,
                              primary_event == "Yes" ~ 1))
 df <- df %>%
-  mutate(TRT_num = case_when(TRT == "Control" ~ 0,
+  mutate(TRT_n = case_when(TRT == "Control" ~ 0,
                              TRT == "Intervention" ~ 1))
 
 # SW plot
-swPlot(EQUK_change, TRT_num, PHASE, phc_code_modif, df, by.wave=FALSE,
+swPlot(EQUK_change, TRT_n, PHASE_f, phc_code_modif, df, by.wave=FALSE,
        combined.plot=FALSE, 
        choose.tx.pos="bottomright",
        choose.legend.pos="bottom")
 
 # table(df$PHASE,df$TRT)
-# table(df$block,df$TRT) # block = sequence = randomised - but is not used! 
+# table(df$block,df$TRT) # block = sequence = randomised. Important: Different to a parallel CRT (or individual RCT) the randomized group variable is not used in the model
 
 # GLMM
-outcome.glmm <- glmer(primary_event ~ (1|phc_code) + TRT + PHASE_factor,
-                   data = df, family = "binomial")
+outcome.glmm <- glmer(primary_event_f ~ (1|phc_code) + TRT_f + PHASE_f, data = df, family = "binomial")
 tab_model(outcome.glmm)
 ```
 
 <table style="border-collapse:collapse; border:none;">
 <tr>
 <th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; ">&nbsp;</th>
-<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">primary event</th>
+<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">primary event f</th>
 </tr>
 <tr>
 <td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; ">Predictors</td>
@@ -1074,25 +571,25 @@ tab_model(outcome.glmm)
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
 </tr>
 <tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">TRT [Intervention]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">TRT f [Intervention]</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.00</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.86&nbsp;&ndash;&nbsp;1.17</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.955</td>
 </tr>
 <tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">PHASE factor [2]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">PHASE f [2]</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.86</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.63&nbsp;&ndash;&nbsp;2.12</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
 </tr>
 <tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">PHASE factor [3]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">PHASE f [3]</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.08</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.92&nbsp;&ndash;&nbsp;1.27</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.355</td>
 </tr>
 <tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">PHASE factor [4]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">PHASE f [4]</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.47</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.21&nbsp;&ndash;&nbsp;1.79</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
@@ -1129,16 +626,15 @@ tab_model(outcome.glmm)
 </table>
 
 ```r
-# GEE
-outcome.gee <- geeglm(primary_event_num ~ TRT + PHASE_factor,
-                   id = phc_code, data = df, corstr = "exchangeable", family = "binomial")
-tab_model(outcome.gee)
+# GEE - what the authors used in the publication // takes ~ 1min to converge
+outcome.gee <- geeglm(primary_event_n ~ TRT_f + PHASE_f, id = phc_code, data = df, corstr = "exchangeable", family = "binomial")
+tab_model(outcome.gee) # same as in publication
 ```
 
 <table style="border-collapse:collapse; border:none;">
 <tr>
 <th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; ">&nbsp;</th>
-<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">primary event num</th>
+<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">primary event n</th>
 </tr>
 <tr>
 <td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; ">Predictors</td>
@@ -1153,25 +649,25 @@ tab_model(outcome.gee)
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
 </tr>
 <tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">TRT [Intervention]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">TRT f [Intervention]</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.01</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.80&nbsp;&ndash;&nbsp;1.26</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.961</td>
 </tr>
 <tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">PHASE factor [2]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">PHASE f [2]</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.85</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.54&nbsp;&ndash;&nbsp;2.23</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
 </tr>
 <tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">PHASE factor [3]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">PHASE f [3]</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.08</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.87&nbsp;&ndash;&nbsp;1.33</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.494</td>
 </tr>
 <tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">PHASE factor [4]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">PHASE f [4]</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.47</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.15&nbsp;&ndash;&nbsp;1.87</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>0.002</strong></td>
@@ -1188,8 +684,397 @@ tab_model(outcome.gee)
 </table>
 
 ```r
-#Note
+# Note: think about decaying correlation structure
 ```
 
-![](stats_analyses_CRTs_files/figure-html/unnamed-chunk-4-1.png)<!-- -->
+![](stats_analyses_CRTs_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
+
+# Parallel CRT with baseline period
+Based on: https://www.bmj.com/content/360/bmj.k1121.long
+Using data from PEBRA trial.
+1. Trial publication: https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004150
+2. Trial code repo: https://github.com/alainamstutz/pebra 
+
+## There are various ways to do it:
+1. Analysis of covariance (ANCOVA): Aggregate outcomes at baseline, and adjusts each individual participant at follow-up for the baseline cluster mean
+2. Constrained baseline analysis: Treat outcomes collected at baseline and follow-up as longitudinal, and to use a repeated measures analysis to estimate the effect of the intervention being switched on in one of the randomised groups on the second of these occasions, see design matrix in https://clusterrcts.shinyapps.io/rshinyapp/. Unlike a difference of differences analysis, it assumes that there is no systematic difference between the groups at baseline.
+
+## Load data
+
+```r
+df <- readRDS("df_pebra.RData")
+```
+
+## Primary model, without baseline period
+
+```r
+# ITT model on primary endpoint (viral load), see publication
+vs <- glmer(endpoint_reached ~ ARM + (1|USER) + DISTRICT + GENDER, data = df,
+              family = "binomial")
+```
+
+```
+## boundary (singular) fit: see help('isSingular')
+```
+
+```r
+tab_model(vs)
+```
+
+<table style="border-collapse:collapse; border:none;">
+<tr>
+<th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; ">&nbsp;</th>
+<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">endpoint reached</th>
+</tr>
+<tr>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; ">Predictors</td>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">Odds Ratios</td>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">CI</td>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">p</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">(Intercept)</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.93</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.26&nbsp;&ndash;&nbsp;2.97</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>0.003</strong></td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">ARM [interv.]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.27</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.79&nbsp;&ndash;&nbsp;2.03</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.327</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">DISTRICT [Leribe]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.71</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.34&nbsp;&ndash;&nbsp;1.49</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.370</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">DISTRICT [MKG]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.59</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.36&nbsp;&ndash;&nbsp;0.98</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>0.040</strong></td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">GENDER [male]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.11</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.66&nbsp;&ndash;&nbsp;1.88</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.688</td>
+</tr>
+<tr>
+<td colspan="4" style="font-weight:bold; text-align:left; padding-top:.8em;">Random Effects</td>
+</tr>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&sigma;<sup>2</sup></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">3.29</td>
+</tr>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&tau;<sub>00</sub> <sub>USER</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.00</td>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>USER</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">20</td>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;">Observations</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3">307</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">Marginal R<sup>2</sup> / Conditional R<sup>2</sup></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.023 / NA</td>
+</tr>
+
+</table>
+
+## With baseline period: Analysis of covariance
+
+```r
+# Calculate the mean cluster value of the baseline viral load
+df$VL_RESULT_baseline <- as.numeric(df$VL_RESULT_baseline)
+df <- df %>% # there are several baseline VL variables, to force <20 into 0 is not ideal, but best we can do.
+  mutate(baseline_Vl_num = case_when(baseline_Vl_cat == "<20" ~ 0,
+                                     baseline_Vl_cat == ">999" ~ VL_RESULT_baseline,
+                                     baseline_Vl_cat == "20-999" ~ VL_RESULT_baseline))
+cluster_mean <- df %>%
+  group_by(USER) %>%
+  drop_na(baseline_Vl_num) %>% 
+  summarize(baseline_Vl_meanUSER = mean(baseline_Vl_num))
+df <- left_join(df, cluster_mean[, c("baseline_Vl_meanUSER", "USER")], by = join_by(USER == USER))
+
+# individual-level ANCOVA with cluster-level adjustment
+vs.ancova <- glmer(endpoint_reached ~ DISTRICT + ARM + GENDER + (1|USER) + baseline_Vl_meanUSER, 
+              data = df, family = "binomial")
+# tab_model(vs.ancova)
+# not ideal, due to cluster level aggregation of viral load categories
+```
+
+## With baseline period: Constrained baseline analysis
+Two possible ways: The first approach assumes that the correlation between two people from the same cluster is the same whether they are sampled in the same period or a different period. The second approach allows the correlation to be weaker between different periods. The method is extremely flexible, is available in cohort or repeated cross section forms, and allows an analysis based on individual level data, with no aggregation needed either at baseline or at follow-up.
+
+```r
+# First, reshape dataset to mirror the design
+# Duplicate the dataset
+df_dup <- rep(list(df), times = 2)
+df_dup <- do.call(rbind, df_dup)
+# Create a new variable "time" and assign values 0 and 1 to each of the created clones, corresponding to 0=baseline and 1=follow-up
+df_dup$time <- rep(0:1, each = nrow(df_dup) / 2)
+# Add the baseline VL to the baseline clone, using the same definition as for the outcome
+df_dup <- df_dup %>% 
+  mutate(baseline_endpoint_reached = case_when(baseline_Vl_cat == "<20" ~ 1,
+                                               baseline_Vl_cat == "20-999" | baseline_Vl_cat == ">999" ~ 0))
+df_dup <- df_dup %>% 
+  mutate(endpoint_reached = case_when(time == 0 ~ baseline_endpoint_reached,
+                           TRUE ~ endpoint_reached))
+# Create the treatment variable by period (=time)
+df_dup <- df_dup %>% 
+  mutate(treat = case_when(ARM == "interv." & time == 1 ~ 1,
+                           TRUE ~ 0))
+# df_dup %>%
+#   select(time, USER, IND_ID, ARM, treat, endpoint_reached, baseline_endpoint_reached) %>%
+#   View()
+
+# Approach 1: constrained baseline analysis – inflexible correlation structure, assuming a random effect of cluster and a random effect of individual nested within cluster, but no random effect of time nested within cluster (this fits a model where the cluster autocorrelation is assumed to be 1).
+vs.constrained.inflex <- glmer(endpoint_reached ~ time + treat + (1|USER) + DISTRICT + GENDER, data = df_dup, family = "binomial")
+
+# Approach 2: constrained baseline analysis – flexible correlation structure, assume instead a random effect of cluster, a random effect of individual nested within cluster, and a random effect of time nested within cluster (this allows the cluster autocorrelation to be less than 1)
+vs.constrained.flex <- glmer(endpoint_reached ~ time + treat + (1|USER) + (1|USER:time) + DISTRICT + GENDER, data = df_dup, family = "binomial")
+
+# compare the three models, a) primary, b) constrained baseline inflexible, c) constrained baseline flexible
+tab_model(vs) # primary model
+```
+
+<table style="border-collapse:collapse; border:none;">
+<tr>
+<th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; ">&nbsp;</th>
+<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">endpoint reached</th>
+</tr>
+<tr>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; ">Predictors</td>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">Odds Ratios</td>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">CI</td>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">p</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">(Intercept)</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.93</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.26&nbsp;&ndash;&nbsp;2.97</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>0.003</strong></td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">ARM [interv.]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.27</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.79&nbsp;&ndash;&nbsp;2.03</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.327</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">DISTRICT [Leribe]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.71</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.34&nbsp;&ndash;&nbsp;1.49</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.370</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">DISTRICT [MKG]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.59</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.36&nbsp;&ndash;&nbsp;0.98</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>0.040</strong></td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">GENDER [male]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.11</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.66&nbsp;&ndash;&nbsp;1.88</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.688</td>
+</tr>
+<tr>
+<td colspan="4" style="font-weight:bold; text-align:left; padding-top:.8em;">Random Effects</td>
+</tr>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&sigma;<sup>2</sup></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">3.29</td>
+</tr>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&tau;<sub>00</sub> <sub>USER</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.00</td>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>USER</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">20</td>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;">Observations</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3">307</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">Marginal R<sup>2</sup> / Conditional R<sup>2</sup></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.023 / NA</td>
+</tr>
+
+</table>
+
+```r
+tab_model(vs.constrained.inflex) # As with a difference of differences analysis, the treatment effect is the regression coefficient for treat
+```
+
+<table style="border-collapse:collapse; border:none;">
+<tr>
+<th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; ">&nbsp;</th>
+<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">endpoint reached</th>
+</tr>
+<tr>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; ">Predictors</td>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">Odds Ratios</td>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">CI</td>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">p</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">(Intercept)</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">2.20</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.58&nbsp;&ndash;&nbsp;3.06</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">time</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.96</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.64&nbsp;&ndash;&nbsp;1.45</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.861</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">treat</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.32</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.82&nbsp;&ndash;&nbsp;2.11</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.256</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">DISTRICT [Leribe]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.04</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.60&nbsp;&ndash;&nbsp;1.82</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.884</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">DISTRICT [MKG]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.52</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.36&nbsp;&ndash;&nbsp;0.75</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">GENDER [male]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.78</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.54&nbsp;&ndash;&nbsp;1.14</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.197</td>
+</tr>
+<tr>
+<td colspan="4" style="font-weight:bold; text-align:left; padding-top:.8em;">Random Effects</td>
+</tr>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&sigma;<sup>2</sup></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">3.29</td>
+</tr>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&tau;<sub>00</sub> <sub>USER</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.00</td>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>USER</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">20</td>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;">Observations</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3">580</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">Marginal R<sup>2</sup> / Conditional R<sup>2</sup></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.038 / NA</td>
+</tr>
+
+</table>
+
+```r
+tab_model(vs.constrained.flex) # As with a difference of differences analysis, the treatment effect is the regression coefficient for treat
+```
+
+<table style="border-collapse:collapse; border:none;">
+<tr>
+<th style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm;  text-align:left; ">&nbsp;</th>
+<th colspan="3" style="border-top: double; text-align:center; font-style:normal; font-weight:bold; padding:0.2cm; ">endpoint reached</th>
+</tr>
+<tr>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  text-align:left; ">Predictors</td>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">Odds Ratios</td>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">CI</td>
+<td style=" text-align:center; border-bottom:1px solid; font-style:italic; font-weight:normal;  ">p</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">(Intercept)</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">2.20</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.58&nbsp;&ndash;&nbsp;3.06</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">time</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.96</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.64&nbsp;&ndash;&nbsp;1.45</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.861</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">treat</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.32</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.82&nbsp;&ndash;&nbsp;2.11</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.256</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">DISTRICT [Leribe]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">1.04</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.60&nbsp;&ndash;&nbsp;1.82</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.884</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">DISTRICT [MKG]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.52</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.36&nbsp;&ndash;&nbsp;0.75</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  "><strong>&lt;0.001</strong></td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; ">GENDER [male]</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.78</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.54&nbsp;&ndash;&nbsp;1.14</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:center;  ">0.197</td>
+</tr>
+<tr>
+<td colspan="4" style="font-weight:bold; text-align:left; padding-top:.8em;">Random Effects</td>
+</tr>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&sigma;<sup>2</sup></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">3.29</td>
+</tr>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&tau;<sub>00</sub> <sub>USER:time</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.00</td>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&tau;<sub>00</sub> <sub>USER</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.00</td>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>USER</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">20</td>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>time</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">2</td>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;">Observations</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3">580</td>
+</tr>
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">Marginal R<sup>2</sup> / Conditional R<sup>2</sup></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.038 / NA</td>
+</tr>
+
+</table>
 
