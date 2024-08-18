@@ -47,6 +47,8 @@ library(lmerTest) # GLMM for CRTs with cont outcome: cluster-specific model (con
 library(geepack) # GEE for CRTs: population-averaged model (marginal) incl. sandwich estimator and exchangeable correlation structure
 library(ICC) # one-way ANOVA for the calculation of the ICC, using mean squares within and between clusters
 library(swCRTdesign) # stepped-wedge design plot
+
+library(pwr)
 ```
 
 # Parallel CRT
@@ -1077,3 +1079,98 @@ tab_model(vs.constrained.flex) # As with a difference of differences analysis, t
 
 </table>
 
+# Sample size calculation for parallel CRT with binary outcome AND baseline period AND closed cohort
+##### following "Hooper et al. Sample size calculation for stepped wedge and other longitudinal cluster randomised trials. Statistics in Medicine. 2016" https://onlinelibrary.wiley.com/doi/10.1002/sim.7028 
+
+```r
+# Define the design parameters
+## cluster-randomized
+## parallel, 1:1, two-arm, usual care
+## closed cohort
+## binary outcome
+## with baseline period
+
+# Define the num. parameters
+alpha <- 0.05 # alpha level
+power <- 0.80 # power
+p_cont <- 0.20 # Proportion of outcome in the control group
+p_int <- 0.35 # Proportion of outcome in the intervention group
+
+cluster_size <- 16  # Average cluster size, i.e. participants per cluster
+
+icc <- 0.15  # Intra-cluster correlation coefficient; "how similar outcomes are within the same cluster"
+cac <- 1 # cluster auto-correlation: A cluster autocorrelation less than 1 reflects a situation where individuals sampled from the same cluster at different times have less correlated outcomes than individuals sampled from the same cluster at the same time; "how similar outcomes are within the same cluster over time" => if closed cohort, then CAC = 1, because same individuals
+iac <- 0.8 # individual auto-correlation: Individual autocorrelation refers to the correlation between repeated measurements taken from the same individual over time in a longitudinal study; r=1: Perfect positive autocorrelation — successive measurements are identical; r=0: No autocorrelation — successive measurements are independent. (of course, during usual care, without the intervention)
+
+deff_c <- 1 + (cluster_size - 1) * icc # design effect due to cluster randomising
+rcc <- ((cluster_size*icc*cac) + ((1-icc)*iac)) / (1 + ((cluster_size-1)*icc)) # the correlation between Yt1kl and Yt2kl for any k, l, t1 ≠ t2 under model (9): "The only other thing that matters to the variance of the treatment effect estimator is the correlation, r"; the correlation between outcomes at different times within the same cluster (r) is the crucial factor that affects the variance of the treatment effect estimator!
+deff_r <- (1-rcc^2) # design effect due to repeated assessment
+
+
+# First, calculate the sample size for an individual RCT, using pwr, two-sided (effect could go either way)
+ss_ind_1arm <- pwr.2p.test(h = ES.h(p_int, p_cont), 
+                           sig.level = alpha, 
+                           power = power)
+ss_ind <- ss_ind_1arm$n * 2
+# print
+cat("Total sample size individual RCT, pwr:", ss_ind)
+```
+
+```
+## Total sample size individual RCT, pwr: 273.5005
+```
+
+```r
+# cat("Total sample size individual RCT, pwr:", round(ss_ind, 0))
+
+## to compare, use formula instead of pwr package
+Z_alpha_half <- qnorm(1 - alpha / 2) # translate into Z-distribution -> equals 0.975 (95% CI) 
+Z_beta <- qnorm(power)
+ss_ind_1arm_man <- ((Z_alpha_half + Z_beta)^2 * (p_int * (1 - p_int) + p_cont * (1 - p_cont))) / (p_int - p_cont)^2
+ss_ind_man <- ss_ind_1arm_man * 2
+# print
+cat("Total sample size individual RCT, manual:", ss_ind_man) # total sample size
+```
+
+```
+## Total sample size individual RCT, manual: 270.3503
+```
+
+```r
+# Second, inflate for clustering, following a standard parallel 1:1 CRT without repeated measures/baseline period
+ss_crt_standard <- ss_ind * deff_c
+cat("Total sample size CRT, standard:", ss_crt_standard) # total sample size
+```
+
+```
+## Total sample size CRT, standard: 888.8766
+```
+
+```r
+n_clus_crt_standard <- ss_crt_standard / cluster_size
+cat("Total N clusters CRT, standard:", n_clus_crt_standard) # total number of clusters (divide by arm or sequence/steps if SWCRT)
+```
+
+```
+## Total N clusters CRT, standard: 55.55479
+```
+
+```r
+# Third, add the baseline period and assume a closed cohort, i.e., 1 repeated measure among the same individuals
+ss_crt_b_period <- deff_r*deff_c*ss_ind # total sample size
+cat("Total sample size CRT, baseline period:", ss_crt_b_period) # total sample size
+```
+
+```
+## Total sample size CRT, baseline period: 90.55812
+```
+
+```r
+n_clus_crt_b_period <- ss_crt_b_period / cluster_size
+cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total number of clusters (divide by arm or sequence/steps if SWCRT)
+```
+
+```
+## Total N clusters CRT, baseline period: 5.659882
+```
+##### the exact same results were obtained when using the online sample size calculator for CRTs, developed by Hemming et al.: https://clusterrcts.shinyapps.io/rshinyapp/ (assuming an exchangable correlation structure, i.e. CAC = 1)
