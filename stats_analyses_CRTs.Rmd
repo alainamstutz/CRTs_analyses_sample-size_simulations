@@ -263,9 +263,9 @@ df_dup <- df_dup %>%
 df_dup <- df_dup %>% 
   mutate(treat = case_when(ARM == "interv." & time == 1 ~ 1,
                            TRUE ~ 0))
-# df_dup %>%
-#   select(time, USER, IND_ID, ARM, treat, endpoint_reached, baseline_endpoint_reached) %>%
-#   View()
+df_dup %>%
+  select(time, USER, IND_ID, ARM, treat, endpoint_reached, baseline_endpoint_reached) %>%
+  View()
 
 # Approach 1: constrained baseline analysis – inflexible correlation structure, assuming a random effect of cluster and a random effect of individual nested within cluster, but no random effect of time nested within cluster (this fits a model where the cluster autocorrelation is assumed to be 1).
 vs.constrained.inflex <- glmer(endpoint_reached ~ time + treat + (1|USER) + DISTRICT + GENDER, data = df_dup, family = "binomial")
@@ -277,6 +277,13 @@ vs.constrained.flex <- glmer(endpoint_reached ~ time + treat + (1|USER) + (1|USE
 tab_model(vs) # primary model
 tab_model(vs.constrained.inflex) # As with a difference of differences analysis, the treatment effect is the regression coefficient for treat
 tab_model(vs.constrained.flex) # As with a difference of differences analysis, the treatment effect is the regression coefficient for treat
+
+```
+
+# Simulations and Sample Size calculations for parallel CRT with baseline period AND closed cohort
+```{r message=FALSE, warning=FALSE}
+
+
 
 ```
 
