@@ -837,11 +837,16 @@ df_dup <- df_dup %>%
 #   select(time, USER, IND_ID, ARM, treat, endpoint_reached, baseline_endpoint_reached) %>%
 #   View()
 
+# # just for simplicity: take out NA, assign not reached endpoint
+# df_dup <- df_dup %>% 
+#   mutate(endpoint_reached = case_when(is.na(endpoint_reached) ~ 0,
+#                            TRUE ~ endpoint_reached))
+
 # Approach 1: constrained baseline analysis – inflexible correlation structure, assuming a random effect of cluster and a random effect of individual nested within cluster, but no random effect of time nested within cluster (this fits a model where the cluster autocorrelation is assumed to be 1).
 vs.constrained.inflex <- glmer(endpoint_reached ~ time + treat + (1|USER) + DISTRICT + GENDER, data = df_dup, family = "binomial")
 
 # Approach 2: constrained baseline analysis – flexible correlation structure, assume instead a random effect of cluster, a random effect of individual nested within cluster, and a random effect of time nested within cluster (this allows the cluster autocorrelation to be less than 1)
-vs.constrained.flex <- glmer(endpoint_reached ~ time + treat + (1|USER) + (1|USER:time) + DISTRICT + GENDER, data = df_dup, family = "binomial")
+vs.constrained.flex <- glmer(endpoint_reached ~ time + treat + (1|USER) + (1 + time | USER) + DISTRICT + GENDER, data = df_dup, family = binomial, control = glmerControl(optimizer = "bobyqa"))
 
 # compare the three models, a) primary, b) constrained baseline inflexible, c) constrained baseline flexible
 tab_model(vs) # primary model
@@ -1054,20 +1059,24 @@ tab_model(vs.constrained.flex) # As with a difference of differences analysis, t
 </tr>
 
 <tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&tau;<sub>00</sub> <sub>USER:time</sub></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.00</td>
-
-<tr>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&tau;<sub>00</sub> <sub>USER</sub></td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.00</td>
 
 <tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>USER</sub></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">20</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&tau;<sub>00</sub> <sub>USER.1</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.00</td>
 
 <tr>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>time</sub></td>
-<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">2</td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&tau;<sub>11</sub> <sub>USER.1.time</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">0.00</td>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">&rho;<sub>01</sub> <sub>USER.1</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">&nbsp;</td>
+
+<tr>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm;">N <sub>USER</sub></td>
+<td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left;" colspan="3">20</td>
 <tr>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; text-align:left; padding-top:0.1cm; padding-bottom:0.1cm; border-top:1px solid;">Observations</td>
 <td style=" padding:0.2cm; text-align:left; vertical-align:top; padding-top:0.1cm; padding-bottom:0.1cm; text-align:left; border-top:1px solid;" colspan="3">580</td>
@@ -1079,8 +1088,59 @@ tab_model(vs.constrained.flex) # As with a difference of differences analysis, t
 
 </table>
 
+```r
+summary(vs.constrained.flex)
+```
+
+```
+## Generalized linear mixed model fit by maximum likelihood (Laplace
+##   Approximation) [glmerMod]
+##  Family: binomial  ( logit )
+## Formula: endpoint_reached ~ time + treat + (1 | USER) + (1 + time | USER) +  
+##     DISTRICT + GENDER
+##    Data: df_dup
+## Control: glmerControl(optimizer = "bobyqa")
+## 
+##      AIC      BIC   logLik deviance df.resid 
+##    772.4    816.0   -376.2    752.4      570 
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -1.7047 -1.0683  0.6730  0.7624  1.0774 
+## 
+## Random effects:
+##  Groups Name        Variance  Std.Dev.  Corr
+##  USER   (Intercept) 0.000e+00 0.000e+00     
+##  USER.1 (Intercept) 0.000e+00 0.000e+00     
+##         time        1.389e-15 3.727e-08  NaN
+## Number of obs: 580, groups:  USER, 20
+## 
+## Fixed effects:
+##                Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)     0.78726    0.16951   4.644 3.41e-06 ***
+## time           -0.03641    0.20830  -0.175 0.861232    
+## treat           0.27466    0.24158   1.137 0.255567    
+## DISTRICTLeribe  0.04133    0.28386   0.146 0.884241    
+## DISTRICTMKG    -0.65514    0.18522  -3.537 0.000405 ***
+## GENDERmale     -0.24482    0.18983  -1.290 0.197164    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Correlation of Fixed Effects:
+##             (Intr) time   treat  DISTRICTL DISTRICTM
+## time        -0.474                                  
+## treat        0.038 -0.550                           
+## DISTRICTLrb -0.348  0.004  0.000                    
+## DISTRICTMKG -0.547  0.015 -0.021  0.326             
+## GENDERmale  -0.336  0.051 -0.081 -0.030    -0.002   
+## optimizer (bobyqa) convergence code: 0 (OK)
+## boundary (singular) fit: see help('isSingular')
+```
+
 # Sample size calculation for parallel CRT with binary outcome AND baseline period AND closed cohort
-##### following "Hooper et al. Sample size calculation for stepped wedge and other longitudinal cluster randomised trials. Statistics in Medicine. 2016" https://onlinelibrary.wiley.com/doi/10.1002/sim.7028 
+Following the guidance of: 
+* Hooper Richard et al. Sample size calculation for stepped wedge and other longitudinal cluster randomised trials. Statistics in Medicine. 2016: https://onlinelibrary.wiley.com/doi/10.1002/sim.7028 and 
+* Leyrat Clémence et al. Practical considerations for sample size calculation for cluster randomized trials. Journal of Epidemiology and Population Health. 2024: https://www.sciencedirect.com/science/article/pii/S2950433324000090 
 
 ```r
 # Define the design parameters
@@ -1173,4 +1233,170 @@ cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total numbe
 ```
 ## Total N clusters CRT, baseline period: 5.659882
 ```
-##### the exact same results were obtained when using the online sample size calculator for CRTs, developed by Hemming et al.: https://clusterrcts.shinyapps.io/rshinyapp/ (assuming an exchangable correlation structure, i.e. CAC = 1)
+The exact same results were obtained when using the online sample size calculator for CRTs, developed by Hemming et al.: https://clusterrcts.shinyapps.io/rshinyapp/ (assuming an exchangeable correlation structure, i.e. CAC = 1)
+
+# Simulation of datasets and sample sizes for a parallel CRT with binary outcome AND baseline period AND closed cohort
+Following the code provided in the supplement of (adapted for binary outcome and R): 
+* Hooper Richard et al. Sample size calculation for stepped wedge and other longitudinal cluster randomised trials. Statistics in Medicine. 2016: https://onlinelibrary.wiley.com/doi/10.1002/sim.7028
+
+```r
+s_cohortstep_binary <- function(p_cont, p_int, icc, cac, iac, ncluspergrp, cluster_size, nstep) {
+  
+  # Set seed for reproducibility
+  set.seed(102030)
+  
+  # Calculate log odds for control and intervention
+  odds_control <- p_cont / (1 - p_cont)
+  odds_intervention <- p_int / (1 - p_int)
+  
+  # Calculate treatcoeff as the log of the odds ratio
+  treatcoeff <- log(odds_intervention / odds_control)
+  
+  # Number of clusters
+  nclus <- nstep * ncluspergrp
+  
+  # Generate cluster-level random effects
+  idclus <- rep(1:nclus, each = cluster_size * (nstep + 1))
+  group <- rep(rep(1:nstep, each = cluster_size * (nstep + 1)), ncluspergrp)
+  
+  # idclus <- 1:nclus # The vector idclus will contain integers from 1 to nclus, where each integer represents a unique cluster ID.
+  # group <- rep(1:nstep, each = ncluspergrp) # This line assigns each cluster to a specific group based on the step in the stepped-wedge design. nstep is the number of steps or time periods in the design. ncluspergrp is the number of clusters per group. This vector group indicates the time step to which each cluster belongs. For example, if there are 3 steps and 4 clusters per group, group would be 1 1 1 1 2 2 2 2 3 3 3 3.
+  rand_clus <- rnorm(nclus, 0, sqrt(icc * cac)) # generates nclus random values drawn from a normal distribution with a mean of 0 and a standard deviation of sqrt(icc * cac). icc: similarity of outcomes within clusters. cac: correlation of outcomes within clusters across different time points. The product icc * cac provides a variance measure that represents the contribution of cluster-level random effects to the overall variability of the outcome. The square root is used as the standard deviation for the cluster-level random effects, i.e. the unobserved differences between clusters that might influence the outcome.
+  
+  # Generate time-level random effects
+  rand_time <- matrix(rnorm(nclus * (nstep + 1), 0, sqrt(icc * (1 - cac))), nrow = nclus) # generates random effects that vary across both clusters and time periods. nstep + 1 is the total number of time periods (steps) in the study. nclus * (nstep + 1) represents the total number of cluster-time combinations, which means the total number of random effects to generate. icc * (1 - cac): portion of the within-cluster variability that is not explained by the cluster autocorrelation, i.e., represents the variance of the time-level random effects within clusters. => variability not only between clusters but also over time within each cluster. The outcome for a cluster may vary across different time points due to factors not accounted for by the fixed effects (like the intervention or the passage of time), i.e., the outcomes can fluctuate over time within a cluster, influenced by unmeasured factors.
+  
+  # Expand to individual level
+  id <- rep(1:(nclus * cluster_size), each = ncluspergrp) # nclus * cluster_size gives the total number of individuals in the entire study.
+  rand_char <- rnorm(length(id), 0, sqrt(iac * (1 - icc))) # generates individual-level random effects for each participant in the study. The product iac * (1 - icc) gives the variance of the individual-level random effects, capturing the variability at the individual level after accounting for the intracluster correlation. Taking the square root of this product (sqrt(iac * (1 - icc))) provides the standard deviation used to generate the random effects.
+  
+  # Create time variable and treatment indicator
+  time <- rep(1:(nstep + 1), times = cluster_size * ncluspergrp)
+  treat <- as.numeric(time >= group)
+  
+  # time <- rep(1:(nstep + 1), times = length(idclus))
+  # treat <- as.numeric(time >= rep(group, each = cluster_size * (nstep + 1))) # It assigns a value of 1 if the individual is in the treatment group (i.e., their time step is equal to or greater than their cluster's crossover step) and 0 if they are still in the control group.
+  
+  # Generate individual-level error term
+  rand_err <- rnorm(length(id), 0, sqrt((1 - iac) * (1 - icc))) # The rand_err variable represents the random error at the individual level. This error accounts for variability in the outcome that is not explained by the cluster-level effects, time-level effects, or individual-level characteristics. The term sqrt((1 - iac) * (1 - icc)) captures the variability that is not explained by either individual autocorrelation or intra-cluster correlation. Represents the unstructured random noise at the individual level. While rand_char represents structured random variability associated with individual-level characteristics (i.e. baseline severity). Captures variability that is specific to each individual and consistent over time within the same individual.
+  
+  # Generate the linear predictor (log-odds)
+  # The linear predictor (which is the log-odds) is the input to this logistic function, determining the probability of success (e.g., PrEP uptake) for each individual based on the treatment and other factors. The linear predictor is the sum of all these terms and represents the combined effect of the treatment, cluster, time, individual characteristics, and random noise on the log-odds of the binary outcome. In logistic regression, the probability p of the binary outcome occurring is computed using the logistic function (see below).
+  linear_predictor <- treatcoeff * treat + 
+                   rep(rnorm(nclus, 0, sqrt(icc * cac)), each = cluster_size * (nstep + 1)) + 
+                   as.vector(rnorm(nclus * (nstep + 1), 0, sqrt(icc * (1 - cac)))) + 
+                   rnorm(cluster_size * nclus * (nstep + 1), 0, sqrt(iac * (1 - icc))) + 
+                   rnorm(cluster_size * nclus * (nstep + 1), 0, sqrt((1 - iac) * (1 - icc)))
+
+  # linear_predictor <- treatcoeff * treat + # contribution of the treatment to the linear predictor.
+  #                    rep(rand_clus, each = cluster_size * (nstep + 1)) + # contribution of the cluster to the linear predictor, accounting for how belonging to a particular cluster affects the outcome.
+  #                    as.vector(rand_time) + # flattens the matrix of random time effects into a vector so that it can be added to the linear predictor. Contribution of the specific time point (within each cluster) to the linear predictor, capturing how time impacts the outcome.
+  #   rand_char + 
+  #   rand_err 
+  
+  # Convert linear predictor to probability using logistic function
+  prob <- 1 / (1 + exp(-linear_predictor))
+  
+  # Generate binary outcome based on the probability
+  y <- rbinom(length(prob), size = 1, prob = prob) # For each individual, rbinom() performs a Bernoulli trial (a random experiment with two possible outcomes) with the specified probability of success (from the prob vector). Suppose you have an individual with a probability of 0.7 for PrEP uptake (meaning a 70% chance of uptake). The rbinom() function will generate a 1 (indicating success) with a 70% probability and a 0 (indicating failure) with a 30% probability.
+  
+  # Create a data frame
+  data <- data.frame(id = 1:length(y), idclus, time, treat, y)
+  
+  # data <- data.frame(id, idclus, time, treat, y)
+  
+  # Fit the GLMM model (logistic regression with random effects)
+  library(lme4)
+  model <- glmer(y ~ factor(time) + treat + (1 | idclus) + (1 + time | idclus), 
+                 data = data, family = binomial, control = glmerControl(optimizer = "bobyqa"))
+  
+  # Calculate p-value for the treatment effect
+  treat_effect <- summary(model)$coefficients["treat", "Estimate"]
+  treat_se <- summary(model)$coefficients["treat", "Std. Error"]
+  p_value <- 2 * pnorm(-abs(treat_effect / treat_se))
+  
+  return(list(model = model, p_value = p_value))
+}
+
+
+### 
+simulate_power_binary <- function(p_cont, p_int, icc, cac, iac, cluster_size, nstep, p, start, inc) {
+  power <- 0
+  ncluspergrp <- start
+  
+  while (power < p) { # The loop continues until the simulated power meets or exceeds the desired power level p.
+    results <- replicate(1000, {
+      sim_result <- s_cohortstep_binary(p_cont, p_int, icc, cac, iac, ncluspergrp, cluster_size, nstep)
+      sim_result$p_value < 0.05 # if below 0.05, then TRUE
+    })
+    
+    power <- mean(results) #proportion of simulations in which the treatment effect was significant (i.e., the proportion of TRUE values in results)
+    
+    if (power >= p) { # if power reached, the loop breaks, and the function stops increasing the number of clusters per group.
+      break
+    }
+    
+    ncluspergrp <- ncluspergrp + inc
+  }
+  
+  return(ncluspergrp)
+}
+
+
+
+### Example usage
+set.seed(102030)
+
+p_value_simulation <- s_cohortstep_binary(
+  p_cont = 0.20,                  # Proportion in control group
+  p_int = 0.35,                   # Proportion in intervention group
+  icc = 0.15,                     # Intracluster correlation coefficient
+  cac = 1,                        # Cluster autocorrelation
+  iac = 0.8,                      # Individual autocorrelation
+  ncluspergrp = 3,                # clusters per group
+  cluster_size = 16,              # Number of individuals per cluster
+  nstep = 2                       # Number of steps in the stepped-wedge design
+)
+
+print(p_value_simulation)
+```
+
+```
+## $model
+## Generalized linear mixed model fit by maximum likelihood (Laplace
+##   Approximation) [glmerMod]
+##  Family: binomial  ( logit )
+## Formula: y ~ factor(time) + treat + (1 | idclus) + (1 + time | idclus)
+##    Data: data
+##       AIC       BIC    logLik  deviance  df.resid 
+##  385.2973  414.6010 -184.6487  369.2973       280 
+## Random effects:
+##  Groups   Name        Std.Dev. Corr 
+##  idclus   (Intercept) 0.0000        
+##  idclus.1 (Intercept) 0.7153        
+##           time        0.1768   -1.00
+## Number of obs: 288, groups:  idclus, 6
+## Fixed Effects:
+##   (Intercept)  factor(time)2  factor(time)3          treat  
+##       0.25085        0.08694        0.16666        0.32891  
+## optimizer (bobyqa) convergence code: 0 (OK) ; 0 optimizer warnings; 1 lme4 warnings 
+## 
+## $p_value
+## [1] 0.5623465
+```
+
+```r
+# nclus_required_binary <- simulate_power_binary(
+#   p_cont = 0.20,                  # Proportion in control group
+#   p_int = 0.35,                   # Proportion in intervention group
+#   icc = 0.15,                     # Intracluster correlation coefficient
+#   cac = 1,                        # Cluster autocorrelation
+#   iac = 0.8,                      # Individual autocorrelation
+#   cluster_size = 16,              # Number of individuals per cluster
+#   nstep = 2,                      # Number of steps in the stepped-wedge design
+#   p = 0.1,                        # Desired power level
+#   start = 2,                      # Initial number of clusters per group
+#   inc = 1                         # Increment for increasing clusters per group
+# )
+```
+
