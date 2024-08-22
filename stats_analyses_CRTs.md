@@ -32,7 +32,7 @@ There is an entire literature on when/how to use both of these models, and their
 3. There are several ways how to calculate the ICC, most straight-forward way is using one-way ANOVA by group
 
 ## Parallel CRT with baseline period
-1. "A common enhancement of a simple parallel CRT is to add an assessment of participants’ outcomes in a baseline period (before randomisation). Even if different participants are assessed at baseline and follow-up [i.e. cross-sectional sampling], the fact that they are sampled from the same cluster allows some control for cluster differences." -> https://www.bmj.com/content/360/bmj.k1121.long 
+1. "A common enhancement of a simple parallel CRT is to add an assessment of participants’ outcomes in a baseline period (before randomisation). Even if different participants are assessed at baseline and follow-up [i.e. cross-sectional sampling], the fact that they are sampled from the same cluster allows some control for cluster differences." -> https://www.bmj.com/content/360/bmj.k1121
 2. This is illustratively shown in the sample size calculator: https://clusterrcts.shinyapps.io/rshinyapp/ (switch between "Parallel" and "Parallel with baseline measure") -> can yield a substantial increase in power! See last chapter below.
 
 # Load packages
@@ -1137,19 +1137,40 @@ summary(vs.constrained.flex)
 ## boundary (singular) fit: see help('isSingular')
 ```
 
-# Sample size calculation for parallel CRT with binary outcome AND baseline period AND closed cohort
+# Sample size calculation for parallel CRT with binary outcome (AND baseline period AND closed cohort design)
 Following the guidance of: 
 * Hooper Richard et al. Sample size calculation for stepped wedge and other longitudinal cluster randomised trials. Statistics in Medicine. 2016: https://onlinelibrary.wiley.com/doi/10.1002/sim.7028 and 
-* Leyrat Clémence et al. Practical considerations for sample size calculation for cluster randomized trials. Journal of Epidemiology and Population Health. 2024: https://www.sciencedirect.com/science/article/pii/S2950433324000090 
+* Leyrat Clémence et al. Practical considerations for sample size calculation for cluster randomized trials. Journal of Epidemiology and Population Health. 2024: https://www.sciencedirect.com/science/article/pii/S2950433324000090
+
+On the example of the Hair SALON hybrid implementation-effectiveness pilot parallel CRT in Lesotho.
+
+PICO:
+* P: Adolescent girls and young women aged 15-30
+* I: HIV/SRH package with at least oral PrEP (plus HIVST, oral contraception, menstrual health products, linkage services, etc.)
+* C: ”SOC” at hair salon (info/flyer and referral)
+* O: Feasibility indicators, but explore clinical effectiveness on PrEP uptake at 6 months, for which we power our sample size calculation
+
+Design features:
+* Cluster randomized (hair salons)
+* 1:1 randomization, stratified by district
+* Binary outcome (tbd in detail, proportion of self-reported uptake within past week at 6 months or similar)
+* Closed cohort
+* With baseline period. To increase efficiency, but also avoid recruitment bias, i.e. enrollment before allocation.
+
+Requirements:
+* power: 80%
+* alpha: 5%
+* as few clusters as possible, as few participants as possible (pilot trial)
+
+Assumptions:
+* Baseline uptake: 20% (see survey data)
+* Increase in uptake through intervention: 15%
+* ICC: 0.15 (realistic for a behavioural intervention; PrEP uptake around ICC of 0.15-0.20, see data from SEARCH, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9169331/, and CDC guidance https://www.cdc.gov/hiv/pdf/research/interventionresearch/compendium/prep/PrEP_Chapter_EBI_Criteria.pdf)
+* CAC: 1 (since closed cohort, i.e. same individuals)
+* IAC: 0.8 (what is "often" taken; might even be higher in the PrEP space, to be explored from longitudinal data in the pilot)
+
 
 ```r
-# Define the design parameters
-## cluster-randomized
-## parallel, 1:1, two-arm, usual care
-## closed cohort
-## binary outcome
-## with baseline period
-
 # Define the num. parameters
 alpha <- 0.05 # alpha level
 power <- 0.80 # power
@@ -1159,11 +1180,11 @@ p_int <- 0.35 # Proportion of outcome in the intervention group
 cluster_size <- 16  # Average cluster size, i.e. participants per cluster
 
 icc <- 0.15  # Intra-cluster correlation coefficient; "how similar outcomes are within the same cluster"
-cac <- 1 # cluster auto-correlation: A cluster autocorrelation less than 1 reflects a situation where individuals sampled from the same cluster at different times have less correlated outcomes than individuals sampled from the same cluster at the same time; "how similar outcomes are within the same cluster over time" => if closed cohort, then CAC = 1, because same individuals
-iac <- 0.8 # individual auto-correlation: Individual autocorrelation refers to the correlation between repeated measurements taken from the same individual over time in a longitudinal study; r=1: Perfect positive autocorrelation — successive measurements are identical; r=0: No autocorrelation — successive measurements are independent. (of course, during usual care, without the intervention)
+cac <- 1 # cluster auto-correlation; "how similar outcomes are within the same cluster over time"; a cluster autocorrelation less than 1 reflects a situation where individuals sampled from the same cluster at different times have less correlated outcomes than individuals sampled from the same cluster at the same time; however, if closed cohort then CAC = 1, because same individuals.
+iac <- 0.8 # individual auto-correlation; correlation between repeated measurements taken from the same individual over time; r=1: Perfect positive autocorrelation — successive measurements are identical; r=0: No autocorrelation — successive measurements are independent. (of course, during usual care, without the intervention)
 
-deff_c <- 1 + (cluster_size - 1) * icc # design effect due to cluster randomising
-rcc <- ((cluster_size*icc*cac) + ((1-icc)*iac)) / (1 + ((cluster_size-1)*icc)) # the correlation between Yt1kl and Yt2kl for any k, l, t1 ≠ t2 under model (9): "The only other thing that matters to the variance of the treatment effect estimator is the correlation, r"; the correlation between outcomes at different times within the same cluster (r) is the crucial factor that affects the variance of the treatment effect estimator!
+deff_c <- 1 + (cluster_size - 1) * icc # design effect due to cluster randomization
+rcc <- ((cluster_size*icc*cac) + ((1-icc)*iac)) / (1 + ((cluster_size-1)*icc)) # the correlation between Yt1kl and Yt2kl for any k, l, t1 ≠ t2 under model (see formula 9 in Hooper et al): "The only other thing that matters to the variance of the treatment effect estimator is the correlation, r"; the correlation between outcomes at different times within the same cluster (r) is the crucial factor that affects the variance of the treatment effect estimator.
 deff_r <- (1-rcc^2) # design effect due to repeated assessment
 
 
@@ -1172,7 +1193,6 @@ ss_ind_1arm <- pwr.2p.test(h = ES.h(p_int, p_cont),
                            sig.level = alpha, 
                            power = power)
 ss_ind <- ss_ind_1arm$n * 2
-# print
 cat("Total sample size individual RCT, pwr:", ss_ind)
 ```
 
@@ -1183,12 +1203,12 @@ cat("Total sample size individual RCT, pwr:", ss_ind)
 ```r
 # cat("Total sample size individual RCT, pwr:", round(ss_ind, 0))
 
-## to compare, use formula instead of pwr package
+
+## As a comparison, use "manual" formula instead of pwr package
 Z_alpha_half <- qnorm(1 - alpha / 2) # translate into Z-distribution -> equals 0.975 (95% CI) 
 Z_beta <- qnorm(power)
 ss_ind_1arm_man <- ((Z_alpha_half + Z_beta)^2 * (p_int * (1 - p_int) + p_cont * (1 - p_cont))) / (p_int - p_cont)^2
 ss_ind_man <- ss_ind_1arm_man * 2
-# print
 cat("Total sample size individual RCT, manual:", ss_ind_man) # total sample size
 ```
 
@@ -1197,9 +1217,12 @@ cat("Total sample size individual RCT, manual:", ss_ind_man) # total sample size
 ```
 
 ```r
+# => same result, use pwr result going forward
+
+
 # Second, inflate for clustering, following a standard parallel 1:1 CRT without repeated measures/baseline period
 ss_crt_standard <- ss_ind * deff_c
-cat("Total sample size CRT, standard:", ss_crt_standard) # total sample size
+cat("Total sample size CRT, standard:", ss_crt_standard) # total sample size for a standard CRT
 ```
 
 ```
@@ -1208,7 +1231,7 @@ cat("Total sample size CRT, standard:", ss_crt_standard) # total sample size
 
 ```r
 n_clus_crt_standard <- ss_crt_standard / cluster_size
-cat("Total N clusters CRT, standard:", n_clus_crt_standard) # total number of clusters (divide by arm or sequence/steps if SWCRT)
+cat("Total N clusters CRT, standard:", n_clus_crt_standard) # total number of clusters for a standard CRT (divide by arm or sequence/steps if SWCRT)
 ```
 
 ```
@@ -1217,8 +1240,8 @@ cat("Total N clusters CRT, standard:", n_clus_crt_standard) # total number of cl
 
 ```r
 # Third, add the baseline period and assume a closed cohort, i.e., 1 repeated measure among the same individuals
-ss_crt_b_period <- deff_r*deff_c*ss_ind # total sample size
-cat("Total sample size CRT, baseline period:", ss_crt_b_period) # total sample size
+ss_crt_b_period <- deff_r*deff_c*ss_ind 
+cat("Total sample size CRT, baseline period:", ss_crt_b_period) # total sample size for a CRT with baseline period design
 ```
 
 ```
@@ -1227,13 +1250,14 @@ cat("Total sample size CRT, baseline period:", ss_crt_b_period) # total sample s
 
 ```r
 n_clus_crt_b_period <- ss_crt_b_period / cluster_size
-cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total number of clusters (divide by arm or sequence/steps if SWCRT)
+cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total number of clusters for a CRT with baseline period design (divide by arm or sequence/steps if SWCRT)
 ```
 
 ```
 ## Total N clusters CRT, baseline period: 5.659882
 ```
-The exact same results were obtained when using the online sample size calculator for CRTs, developed by Hemming et al.: https://clusterrcts.shinyapps.io/rshinyapp/ (assuming an exchangeable correlation structure, i.e. CAC = 1)
+The exact same results were obtained when using the online sample size calculator for CRTs, developed by Hemming et al ! ->  https://clusterrcts.shinyapps.io/rshinyapp/ (assuming an exchangeable correlation structure, i.e. CAC = 1)
+
 
 # Simulation of datasets and sample sizes for a parallel CRT with binary outcome AND baseline period AND closed cohort
 Following the code provided in the supplement of (adapted for binary outcome and R): 
@@ -1256,54 +1280,40 @@ s_cohortstep_binary <- function(p_cont, p_int, icc, cac, iac, ncluspergrp, clust
   nclus <- nstep * ncluspergrp
   
   # Generate cluster-level random effects
-  idclus <- rep(1:nclus, each = cluster_size * (nstep + 1))
-  group <- rep(rep(1:nstep, each = cluster_size * (nstep + 1)), ncluspergrp)
-  
-  # idclus <- 1:nclus # The vector idclus will contain integers from 1 to nclus, where each integer represents a unique cluster ID.
-  # group <- rep(1:nstep, each = ncluspergrp) # This line assigns each cluster to a specific group based on the step in the stepped-wedge design. nstep is the number of steps or time periods in the design. ncluspergrp is the number of clusters per group. This vector group indicates the time step to which each cluster belongs. For example, if there are 3 steps and 4 clusters per group, group would be 1 1 1 1 2 2 2 2 3 3 3 3.
-  rand_clus <- rnorm(nclus, 0, sqrt(icc * cac)) # generates nclus random values drawn from a normal distribution with a mean of 0 and a standard deviation of sqrt(icc * cac). icc: similarity of outcomes within clusters. cac: correlation of outcomes within clusters across different time points. The product icc * cac provides a variance measure that represents the contribution of cluster-level random effects to the overall variability of the outcome. The square root is used as the standard deviation for the cluster-level random effects, i.e. the unobserved differences between clusters that might influence the outcome.
+  idclus <- rep(1:nclus, each = cluster_size * (nstep + 1))  # The vector contains integers from 1 to nclus; each integer represents a unique cluster ID.
+  group <- rep(rep(1:nstep, each = cluster_size * (nstep + 1)), ncluspergrp) # Assign each cluster to a specific group based on the step in the stepped-wedge design. nstep is the number of steps or time periods. ncluspergrp is the number of clusters per group. 
+  rand_clus <- rnorm(nclus, 0, sqrt(icc * cac)) # generates random values drawn from a normal distribution with a mean of 0 and a standard deviation of sqrt(icc * cac). The product icc * cac provides a variance measure that represents the contribution of cluster-level random effects to the overall variability of the outcome (using the square root to get standard deviations), i.e. the unobserved differences between clusters that might influence the outcome.
   
   # Generate time-level random effects
-  rand_time <- matrix(rnorm(nclus * (nstep + 1), 0, sqrt(icc * (1 - cac))), nrow = nclus) # generates random effects that vary across both clusters and time periods. nstep + 1 is the total number of time periods (steps) in the study. nclus * (nstep + 1) represents the total number of cluster-time combinations, which means the total number of random effects to generate. icc * (1 - cac): portion of the within-cluster variability that is not explained by the cluster autocorrelation, i.e., represents the variance of the time-level random effects within clusters. => variability not only between clusters but also over time within each cluster. The outcome for a cluster may vary across different time points due to factors not accounted for by the fixed effects (like the intervention or the passage of time), i.e., the outcomes can fluctuate over time within a cluster, influenced by unmeasured factors.
+  rand_time <- matrix(rnorm(nclus * (nstep + 1), 0, sqrt(icc * (1 - cac))), nrow = nclus) # generates random effects that vary across both clusters and time periods. nstep + 1 is the total number of time periods (steps) in the study. nclus * (nstep + 1) represents the total number of cluster-time combinations, i.e., the total number of random effects to generate. icc * (1 - cac): portion of the within-cluster variability that is not explained by the cluster autocorrelation, i.e., the variance of the time-level random effects within clusters. => variability not only between clusters but also over time within each cluster! The outcome for a cluster may vary across different time points due to factors not accounted for by the fixed effects (like the intervention or the passage of time), influenced by unmeasured factors.
   
   # Expand to individual level
-  id <- rep(1:(nclus * cluster_size), each = ncluspergrp) # nclus * cluster_size gives the total number of individuals in the entire study.
-  rand_char <- rnorm(length(id), 0, sqrt(iac * (1 - icc))) # generates individual-level random effects for each participant in the study. The product iac * (1 - icc) gives the variance of the individual-level random effects, capturing the variability at the individual level after accounting for the intracluster correlation. Taking the square root of this product (sqrt(iac * (1 - icc))) provides the standard deviation used to generate the random effects.
+  id <- rep(1:(nclus * cluster_size), each = ncluspergrp) # nclus * cluster_size = total number of individuals in the entire study.
+  rand_char <- rnorm(length(id), 0, sqrt(iac * (1 - icc))) # generates individual-level random effects for each participant in the study. The product iac * (1 - icc) gives the variance of the individual-level random effects, capturing the variability at the individual level after accounting for the intracluster correlation.
   
   # Create time variable and treatment indicator
   time <- rep(1:(nstep + 1), times = cluster_size * ncluspergrp)
-  treat <- as.numeric(time >= group)
-  
-  # time <- rep(1:(nstep + 1), times = length(idclus))
-  # treat <- as.numeric(time >= rep(group, each = cluster_size * (nstep + 1))) # It assigns a value of 1 if the individual is in the treatment group (i.e., their time step is equal to or greater than their cluster's crossover step) and 0 if they are still in the control group.
+  treat <- as.numeric(time >= group) # It assigns a value of 1 if the individual is in the treatment group (i.e., their time step is equal to or greater than their cluster's crossover step) and 0 if they are still in the control group.
   
   # Generate individual-level error term
-  rand_err <- rnorm(length(id), 0, sqrt((1 - iac) * (1 - icc))) # The rand_err variable represents the random error at the individual level. This error accounts for variability in the outcome that is not explained by the cluster-level effects, time-level effects, or individual-level characteristics. The term sqrt((1 - iac) * (1 - icc)) captures the variability that is not explained by either individual autocorrelation or intra-cluster correlation. Represents the unstructured random noise at the individual level. While rand_char represents structured random variability associated with individual-level characteristics (i.e. baseline severity). Captures variability that is specific to each individual and consistent over time within the same individual.
+  rand_err <- rnorm(length(id), 0, sqrt((1 - iac) * (1 - icc))) # The rand_err variable represents the random error at the individual level. This error accounts for variability in the outcome that is not explained by the cluster-level effects, time-level effects, or individual-level characteristics. The unstructured random noise at the individual level. While rand_char represents structured random variability associated with individual-level characteristics (e.g. baseline severity).
   
   # Generate the linear predictor (log-odds)
-  # The linear predictor (which is the log-odds) is the input to this logistic function, determining the probability of success (e.g., PrEP uptake) for each individual based on the treatment and other factors. The linear predictor is the sum of all these terms and represents the combined effect of the treatment, cluster, time, individual characteristics, and random noise on the log-odds of the binary outcome. In logistic regression, the probability p of the binary outcome occurring is computed using the logistic function (see below).
+  # The linear predictor (the log-odds) is the input to this logistic function, determining the probability of success (e.g., PrEP uptake) for each individual based on the treatment and other factors. The linear predictor is the sum of all these terms and represents the combined effect of the treatment, cluster, time, individual characteristics, and random noise on the log-odds of the binary outcome. In logistic regression, the probability p of the binary outcome occurring is computed using the logistic function (see formula below, next line).
   linear_predictor <- treatcoeff * treat + 
                    rep(rnorm(nclus, 0, sqrt(icc * cac)), each = cluster_size * (nstep + 1)) + 
                    as.vector(rnorm(nclus * (nstep + 1), 0, sqrt(icc * (1 - cac)))) + 
                    rnorm(cluster_size * nclus * (nstep + 1), 0, sqrt(iac * (1 - icc))) + 
                    rnorm(cluster_size * nclus * (nstep + 1), 0, sqrt((1 - iac) * (1 - icc)))
-
-  # linear_predictor <- treatcoeff * treat + # contribution of the treatment to the linear predictor.
-  #                    rep(rand_clus, each = cluster_size * (nstep + 1)) + # contribution of the cluster to the linear predictor, accounting for how belonging to a particular cluster affects the outcome.
-  #                    as.vector(rand_time) + # flattens the matrix of random time effects into a vector so that it can be added to the linear predictor. Contribution of the specific time point (within each cluster) to the linear predictor, capturing how time impacts the outcome.
-  #   rand_char + 
-  #   rand_err 
   
   # Convert linear predictor to probability using logistic function
   prob <- 1 / (1 + exp(-linear_predictor))
   
   # Generate binary outcome based on the probability
-  y <- rbinom(length(prob), size = 1, prob = prob) # For each individual, rbinom() performs a Bernoulli trial (a random experiment with two possible outcomes) with the specified probability of success (from the prob vector). Suppose you have an individual with a probability of 0.7 for PrEP uptake (meaning a 70% chance of uptake). The rbinom() function will generate a 1 (indicating success) with a 70% probability and a 0 (indicating failure) with a 30% probability.
+  y <- rbinom(length(prob), size = 1, prob = prob) # For each individual, rbinom() performs a Bernoulli trial (a random experiment with two possible outcomes) with the specified probability of success (from the prob vector), e.g.the rbinom() function will generate a 1 (indicating success) with a 20% probability and a 0 (indicating failure) with a 80% probability.
   
   # Create a data frame
   data <- data.frame(id = 1:length(y), idclus, time, treat, y)
-  
-  # data <- data.frame(id, idclus, time, treat, y)
   
   # Fit the GLMM model (logistic regression with random effects)
   library(lme4)
