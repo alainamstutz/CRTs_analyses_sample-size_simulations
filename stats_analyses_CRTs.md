@@ -1410,3 +1410,124 @@ print(p_value_simulation)
 # )
 ```
 
+# Example: ComBaCaL HIV prevention CRT 
+Sample size calculation for parallel CRT with binary outcome (AND baseline period AND closed cohort design). Following the guidance of: 
+* Hooper Richard et al. Sample size calculation for stepped wedge and other longitudinal cluster randomised trials. Statistics in Medicine. 2016: https://onlinelibrary.wiley.com/doi/10.1002/sim.7028 and 
+* Leyrat Clémence et al. Practical considerations for sample size calculation for cluster randomized trials. Journal of Epidemiology and Population Health. 2024: https://www.sciencedirect.com/science/article/pii/S2950433324000090
+
+PICO for sample size calc:
+* P: for intervention: AGYW and other people at risk of HIV acquisition / denominator for SS calc for incidence: All 15+ without HIV
+* I: HIV prevention package (oral PrEP, DPVr, CAB-lA and other LAIs? and SRH products)
+* C: ”SOC” in the village (HIV testing and referral)
+* O: 12m HIV incidence (tbd in detail, esp. reg. inclusion of recency testing)
+
+Design features:
+* Cluster randomized (villages)
+* 1:1 randomization, stratified by district and access
+* Binary outcome
+* Closed cohort. To increase efficiency (but also avoid using recency testin)
+* With baseline period. To increase efficiency (but also avoid recruitment bias, i.e. enrollment before allocation; not an issue here, if entire village enrolled)
+
+Requirements:
+* power: 80%
+* alpha: 5%
+* as few clusters as possible, as few participants as possible
+
+Assumptions:
+* LePHIA 15+: 0.45% in 2020 / UNAIDS/NAOMI for 15+: 0.70% in 2020 and 0.44% in 2023 -> decrease of 0.09%/y => 0.35% 2024
+* Baseline HIV incidence: 0.35% (ignoring annual reduction if no testing of recency)
+* HIV incidence endline in control: 0.20% => -0.15% due to annual reduction and control effect? (If 50x100 HIV- 15+ => 10 acquisitions)
+* HIV incidence endline in intervention: 0.09% => -0.26% due to annual reduction and intervention effect? -> delta: 0.11% (If 50x100 HIV- 15+ => 5 acquisitions). More cautious/conservative than initial sample size calculation, but still bold
+* Cluster size: 90-100 (use/test entire population 15+ HIV-); among those 30-40 (at risk population) to which the intervention is targeted (see ComPreC)
+* ICC: 0.15 (depending on behavioral aspect, behav. outcomes usually at 0.15-0.20, see PrEP uptake)
+* CAC: 1 (since closed cohort, i.e. same individuals)
+* IAC: 0.85 (what is "usually" taken; might even be higher in the PrEP space, to be explored from longitudinal data)
+
+
+```r
+# Define the num. parameters
+alpha <- 0.05 # alpha level
+power <- 0.80 # power
+p_cont <- 0.0020 # Proportion of outcome in the control group
+p_int <- 0.0009 # Proportion of outcome in the intervention group
+
+cluster_size <- 95  # Average cluster size, i.e. participants per cluster (HIV-, 15+)
+
+icc <- 0.15  # Intra-cluster correlation coefficient; "how similar outcomes are within the same cluster"
+cac <- 1 # cluster auto-correlation; "how similar outcomes are within the same cluster over time"; a cluster autocorrelation less than 1 reflects a situation where individuals sampled from the same cluster at different times have less correlated outcomes than individuals sampled from the same cluster at the same time; however, if closed cohort then CAC = 1, because same individuals.
+iac <- 0.85 # individual auto-correlation; correlation between repeated measurements taken from the same individual over time; r=1: Perfect positive autocorrelation — successive measurements are identical; r=0: No autocorrelation — successive measurements are independent. (of course, during usual care, without the intervention)
+
+deff_c <- 1 + (cluster_size - 1) * icc # design effect due to cluster randomization
+rcc <- ((cluster_size*icc*cac) + ((1-icc)*iac)) / (1 + ((cluster_size-1)*icc)) # the correlation between Yt1kl and Yt2kl for any k, l, t1 ≠ t2 under model (see formula 9 in Hooper et al): "The only other thing that matters to the variance of the treatment effect estimator is the correlation, r"; the correlation between outcomes at different times within the same cluster (r) is the crucial factor that affects the variance of the treatment effect estimator.
+deff_r <- (1-rcc^2) # design effect due to repeated assessment
+
+
+# First, calculate the sample size for an individual RCT, using pwr, two-sided (effect could go either way)
+ss_ind_1arm <- pwr.2p.test(h = ES.h(p_int, p_cont), 
+                           sig.level = alpha, 
+                           power = power)
+ss_ind <- ss_ind_1arm$n * 2
+cat("Total sample size individual RCT, pwr:", ss_ind)
+```
+
+```
+## Total sample size individual RCT, pwr: 36165.65
+```
+
+```r
+# cat("Total sample size individual RCT, pwr:", round(ss_ind, 0))
+
+
+## As a comparison, use "manual" formula instead of pwr package
+Z_alpha_half <- qnorm(1 - alpha / 2) # translate into Z-distribution -> equals 0.975 (95% CI) 
+Z_beta <- qnorm(power)
+ss_ind_1arm_man <- ((Z_alpha_half + Z_beta)^2 * (p_int * (1 - p_int) + p_cont * (1 - p_cont))) / (p_int - p_cont)^2
+ss_ind_man <- ss_ind_1arm_man * 2
+cat("Total sample size individual RCT, manual:", ss_ind_man) # total sample size
+```
+
+```
+## Total sample size individual RCT, manual: 37560.33
+```
+
+```r
+# => same result, use pwr result going forward
+
+
+# Second, inflate for clustering, following a standard parallel 1:1 CRT without repeated measures/baseline period
+ss_crt_standard <- ss_ind * deff_c
+cat("Total sample size CRT, standard:", ss_crt_standard) # total sample size for a standard CRT
+```
+
+```
+## Total sample size CRT, standard: 546101.3
+```
+
+```r
+n_clus_crt_standard <- ss_crt_standard / cluster_size
+cat("Total N clusters CRT, standard:", n_clus_crt_standard) # total number of clusters for a standard CRT (divide by arm or sequence/steps if SWCRT)
+```
+
+```
+## Total N clusters CRT, standard: 5748.435
+```
+
+```r
+# Third, add the baseline period and assume a closed cohort, i.e., 1 repeated measure among the same individuals
+ss_crt_b_period <- deff_r*deff_c*ss_ind 
+cat("Total sample size CRT, baseline period:", ss_crt_b_period) # total sample size for a CRT with baseline period design
+```
+
+```
+## Total sample size CRT, baseline period: 9183.306
+```
+
+```r
+n_clus_crt_b_period <- ss_crt_b_period / cluster_size
+cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total number of clusters for a CRT with baseline period design (divide by arm or sequence/steps if SWCRT)
+```
+
+```
+## Total N clusters CRT, baseline period: 96.66637
+```
+The exact same results were obtained when using the online sample size calculator for CRTs, developed by Hemming et al ! ->  https://clusterrcts.shinyapps.io/rshinyapp/ (assuming an exchangeable correlation structure, i.e. CAC = 1)
