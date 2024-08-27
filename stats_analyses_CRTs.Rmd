@@ -504,10 +504,10 @@ Sample size calculation for parallel CRT with binary outcome (AND baseline perio
 * Leyrat Clémence et al. Practical considerations for sample size calculation for cluster randomized trials. Journal of Epidemiology and Population Health. 2024: https://www.sciencedirect.com/science/article/pii/S2950433324000090
 
 PICO for sample size calc:
-* P: for intervention: AGYW and other people at risk of HIV acquisition / denominator for SS calc for incidence: All 15+ without HIV
-* I: HIV prevention package (oral PrEP, DPVr, CAB-lA and other LAIs? and SRH products)
+* P: for intervention: AGYW and other people at risk of HIV acquisition / as denominator for SS calc for incidence: All 15+ without HIV
+* I: HIV prevention package for AGYW and other people at risk of HIV acquisition (oral PrEP, DPVr, CAB-lA and other LAIs? and SRH products) (and ART support for HIV+)
 * C: ”SOC” in the village (HIV testing and referral)
-* O: 12m HIV incidence (tbd in detail, esp. reg. inclusion of recency testing)
+* O: 12m HIV incidence (inclusion of recency testing?)
 
 Design features:
 * Cluster randomized (villages)
@@ -519,15 +519,15 @@ Design features:
 Requirements:
 * power: 80%
 * alpha: 5%
-* as few clusters as possible, as few participants as possible
+* as few clusters and participants as possible
 
 Assumptions:
-* LePHIA 15+: 0.45% in 2020 / UNAIDS/NAOMI for 15+: 0.70% in 2020 and 0.44% in 2023 -> decrease of 0.09%/y => 0.35% 2024
+* LePHIA for 15+: 0.45% in 2020 / UNAIDS/NAOMI for 15+: 0.70% in 2020 and 0.44% in 2023 -> decrease of 0.09%/y => 0.35% in 2024?
 * Baseline HIV incidence: 0.35% (ignoring annual reduction if no testing of recency)
-* HIV incidence endline in control: 0.20% => -0.15% due to annual reduction and control effect? (If 50x100 HIV- 15+ => 10 acquisitions)
-* HIV incidence endline in intervention: 0.09% => -0.26% due to annual reduction and intervention effect? -> delta: 0.11% (If 50x100 HIV- 15+ => 5 acquisitions). More cautious/conservative than initial sample size calculation, but still bold
-* Cluster size: 90-100 (use/test entire population 15+ HIV-); among those 30-40 (at risk population) to which the intervention is targeted (see ComPreC)
-* ICC: 0.15 (depending on behavioral aspect, behav. outcomes usually at 0.15-0.20, see PrEP uptake)
+* HIV incidence endline in control: 0.20% => -0.15% due to annual reduction and control effect? (If 50 villages à 100 HIV- 15+ => 10 acquisitions)
+* HIV incidence endline in intervention: 0.09% => -0.26% due to annual reduction and intervention effect? -> delta: 0.11% (If 50 villages à 100 HIV- 15+ => 5 acquisitions). More cautious/conservative than initial sample size calculation, but still bold.
+* Cluster size: 90-100 (use/test entire population HIV- 15+); among those 30-40 (at risk population) which are being targeted with the intervention
+* ICC: 0.15 (depending on behavioral aspect, behav. outcomes usually at 0.15-0.20, see PrEP uptake, maybe incidence itself a bit lower but it's the same VHW influencing all participant in her cluster)
 * CAC: 1 (since closed cohort, i.e. same individuals)
 * IAC: 0.85 (what is "usually" taken; might even be higher in the PrEP space, to be explored from longitudinal data)
 
