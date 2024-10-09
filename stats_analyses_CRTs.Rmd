@@ -498,7 +498,7 @@ print(p_value_simulation)
 
 ```
 
-# Example: Sample size calculation for parallel CRT with binary outcome (AND baseline period AND closed cohort design) AND multiarm.
+# Sample size calculation for parallel CRT with binary outcome (AND baseline period AND closed cohort design) AND multiarm.
 
 Example: EHR nudges for statin prescription CRT
 
@@ -568,7 +568,7 @@ cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total numbe
 ```
 
 
-# Example: Sample size calculation for parallel CRT with cont outcome (AND baseline period AND closed cohort design) AND multiarm.
+# Sample size calculation for parallel CRT with cont outcome (AND baseline period AND closed cohort design) AND multiarm.
 
 Example: EHR nudges for statin prescription CRT
 

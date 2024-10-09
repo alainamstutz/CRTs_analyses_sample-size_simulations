@@ -1142,7 +1142,7 @@ Following the guidance of:
 * Hooper Richard et al. Sample size calculation for stepped wedge and other longitudinal cluster randomised trials. Statistics in Medicine. 2016: https://onlinelibrary.wiley.com/doi/10.1002/sim.7028 and 
 * Leyrat Clémence et al. Practical considerations for sample size calculation for cluster randomized trials. Journal of Epidemiology and Population Health. 2024: https://www.sciencedirect.com/science/article/pii/S2950433324000090
 
-On the example of the Hair SALON hybrid implementation-effectiveness pilot parallel CRT in Lesotho.
+On the example of the Hair SALON hybrid implementation-effectiveness parallel CRT in Lesotho.
 
 PICO:
 * P: Adolescent girls and young women aged 15-30
@@ -1153,35 +1153,35 @@ PICO:
 Design features:
 * Cluster randomized (hair salons)
 * 1:1 randomization, stratified by district
-* Binary outcome (tbd in detail, proportion of self-reported uptake within past week at 6 months or similar)
+* Binary outcome (self-reported uptake within past week at 6 months)
 * Closed cohort
 * With baseline period. To increase efficiency, but also avoid recruitment bias, i.e. enrollment before allocation.
 
 Requirements:
-* power: 80%
+* power: 90%
 * alpha: 5%
-* as few clusters as possible, as few participants as possible (pilot trial)
+* as few clusters as possible, as few participants as possible
 
 Assumptions:
 * Baseline uptake: 20% (see survey data)
-* Increase in uptake through intervention: 15%
-* ICC: 0.15 (realistic for a behavioural intervention; PrEP uptake around ICC of 0.15-0.20, see data from SEARCH, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9169331/, and CDC guidance https://www.cdc.gov/hiv/pdf/research/interventionresearch/compendium/prep/PrEP_Chapter_EBI_Criteria.pdf)
+* Increase in uptake through intervention: 10%
+* ICC: 0.15 (this is rather conservative, according to guidance from CDC guidance re ICC for PrEP uptake as outcome [https://www.cdc.gov/hiv/pdf/research/interventionresearch/compendium/prep/PrEP_Chapter_EBI_Criteria.pdf] and see data from SEARCH [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9169331/], and realistic for a behavioral intervention)
 * CAC: 1 (since closed cohort, i.e. same individuals)
-* IAC: 0.8 (what is "often" taken; might even be higher in the PrEP space, to be explored from longitudinal data in the pilot)
+* IAC: 0.7 (this is rather conservative; often 0.8 taken; to be explored from longitudinal data in the pilot)
 
 
 ```r
 # Define the num. parameters
 alpha <- 0.05 # alpha level
-power <- 0.80 # power
+power <- 0.90 # power
 p_cont <- 0.20 # Proportion of outcome in the control group
-p_int <- 0.35 # Proportion of outcome in the intervention group
+p_int <- 0.30 # Proportion of outcome in the intervention group
 
-cluster_size <- 16  # Average cluster size, i.e. participants per cluster
+cluster_size <- 20  # Average cluster size, i.e. participants per cluster
 
 icc <- 0.15  # Intra-cluster correlation coefficient; "how similar outcomes are within the same cluster"
 cac <- 1 # cluster auto-correlation; "how similar outcomes are within the same cluster over time"; a cluster autocorrelation less than 1 reflects a situation where individuals sampled from the same cluster at different times have less correlated outcomes than individuals sampled from the same cluster at the same time; however, if closed cohort then CAC = 1, because same individuals.
-iac <- 0.8 # individual auto-correlation; correlation between repeated measurements taken from the same individual over time; r=1: Perfect positive autocorrelation — successive measurements are identical; r=0: No autocorrelation — successive measurements are independent. (of course, during usual care, without the intervention)
+iac <- 0.7 # individual auto-correlation; correlation between repeated measurements taken from the same individual over time; r=1: Perfect positive autocorrelation — successive measurements are identical; r=0: No autocorrelation — successive measurements are independent. (of course, during usual care, without the intervention)
 
 deff_c <- 1 + (cluster_size - 1) * icc # design effect due to cluster randomization
 rcc <- ((cluster_size*icc*cac) + ((1-icc)*iac)) / (1 + ((cluster_size-1)*icc)) # the correlation between Yt1kl and Yt2kl for any k, l, t1 ≠ t2 under model (see formula 9 in Hooper et al): "The only other thing that matters to the variance of the treatment effect estimator is the correlation, r"; the correlation between outcomes at different times within the same cluster (r) is the crucial factor that affects the variance of the treatment effect estimator.
@@ -1197,7 +1197,7 @@ cat("Total sample size individual RCT, pwr:", ss_ind)
 ```
 
 ```
-## Total sample size individual RCT, pwr: 273.5005
+## Total sample size individual RCT, pwr: 780.9784
 ```
 
 ```r
@@ -1213,7 +1213,7 @@ cat("Total sample size individual RCT, manual:", ss_ind_man) # total sample size
 ```
 
 ```
-## Total sample size individual RCT, manual: 270.3503
+## Total sample size individual RCT, manual: 777.5493
 ```
 
 ```r
@@ -1226,7 +1226,7 @@ cat("Total sample size CRT, standard:", ss_crt_standard) # total sample size for
 ```
 
 ```
-## Total sample size CRT, standard: 888.8766
+## Total sample size CRT, standard: 3006.767
 ```
 
 ```r
@@ -1235,7 +1235,7 @@ cat("Total N clusters CRT, standard:", n_clus_crt_standard) # total number of cl
 ```
 
 ```
-## Total N clusters CRT, standard: 55.55479
+## Total N clusters CRT, standard: 150.3383
 ```
 
 ```r
@@ -1245,7 +1245,7 @@ cat("Total sample size CRT, baseline period:", ss_crt_b_period) # total sample s
 ```
 
 ```
-## Total sample size CRT, baseline period: 90.55812
+## Total sample size CRT, baseline period: 385.1086
 ```
 
 ```r
@@ -1254,7 +1254,7 @@ cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total numbe
 ```
 
 ```
-## Total N clusters CRT, baseline period: 5.659882
+## Total N clusters CRT, baseline period: 19.25543
 ```
 The exact same results were obtained when using the online sample size calculator for CRTs, developed by Hemming et al ! ->  https://clusterrcts.shinyapps.io/rshinyapp/ (assuming an exchangeable correlation structure, i.e. CAC = 1)
 
@@ -1410,7 +1410,7 @@ print(p_value_simulation)
 # )
 ```
 
-# Example: Sample size calculation for parallel CRT with cont outcome (AND baseline period AND closed cohort design) AND multiarm.
+# Sample size calculation for parallel CRT with binary outcome (AND baseline period AND closed cohort design) AND multiarm.
 
 Example: EHR nudges for statin prescription CRT
 
@@ -1418,28 +1418,27 @@ PICO:
 * P: People living with HIV with low-moderate-high CVD risk score and not on a statin
 * I: Statin EHR nudges on provider and participant level
 * C: SOC: No Statin EHR nudges
-* O: nonHDL reduction (and Statin prescription rate)
+* O: Statin prescription rate
 
 Design features:
 * Cluster randomized (SHCS sites)
-* 1:1:1 randomization (stratified by mean statin prescription rate / mean nonHDL?)
-* Continuous outcome (15mg/dL nonHDL reduction at 6 months, see guidance)
+* 1:1:1 randomization (stratified by mean statin prescription rate)
+* Binary outcome (statin prescription rate after implementation)
 * Closed cohort
 * With baseline period. To increase efficiency.
 * 3 arms: 1) SOC, 2) provider nudges, 3) provider+participant nudges
 
 Requirements:
-* power: 80%
-* alpha: 5%
-* max. 10 clusters available
+* power: 90%
+* To avoid adjustment for multiple testing, share alpha for the two comparisons
+* as few clusters as possible, as few participants as possible
 
 Assumptions:
-* SD nonHDL: 44mg/dL (see guidance)
-* Clinically meaningful difference nonHDL: 15mg/dL
-* To avoid adjustment for multiple testing, share alpha for the two comparisons
-* ICC: 0.15 (realistic for a behavioural intervention)
-* CAC: 1 (since closed cohort, i.e. same individuals) -> adapt!!!
-* IAC: 0.8 (what is "often" taken)
+* Baseline rate: 25% (see SHCS data)
+* Increase through intervention: 10%
+* ICC: 0.15 (conservative; behavioral)
+* CAC: 1 (since closed cohort, i.e. same individuals)
+* IAC: 0.7 (behavioral)
 
 
 ```r
@@ -1448,14 +1447,115 @@ library(pwr)
 
 # Define parameters
 alpha <- 0.025  # Adjusted alpha for multiple comparisons (split from 0.05)
-power <- 0.80  # 90% power
+power <- 0.90  # 90% power
+p_cont <- 0.25 # Proportion of outcome in the control group
+p_int <- 0.35 # Proportion of outcome in the intervention group
+
+cluster_size <- 33  # Average cluster size
+icc <- 0.15  # Intra-cluster correlation coefficient
+cac <- 1  # Cluster autocorrelation
+iac <- 0.7  # Individual autocorrelation (correlation between measurements within individuals)
+
+# First, calculate the sample size for an individual RCT, using pwr, two-sided (effect could go either way)
+ss_ind_1arm <- pwr.2p.test(h = ES.h(p_int, p_cont), 
+                           sig.level = alpha, 
+                           power = power)
+ss_ind <- ss_ind_1arm$n * 2
+cat("Total sample size individual RCT, pwr:", ss_ind)
+```
+
+```
+## Total sample size individual RCT, pwr: 1035.996
+```
+
+```r
+# Second, inflate for clustering, following a standard parallel 1:1 CRT without repeated measures/baseline period
+ss_crt_standard <- ss_ind * deff_c
+cat("Total sample size CRT, standard:", ss_crt_standard) # total sample size for a standard CRT
+```
+
+```
+## Total sample size CRT, standard: 3988.586
+```
+
+```r
+n_clus_crt_standard <- ss_crt_standard / cluster_size
+cat("Total N clusters CRT, standard:", n_clus_crt_standard) # total number of clusters for a standard CRT (divide by arm or sequence/steps if SWCRT)
+```
+
+```
+## Total N clusters CRT, standard: 120.8662
+```
+
+```r
+# Third, add the baseline period and assume a closed cohort, i.e., 1 repeated measure among the same individuals
+ss_crt_b_period <- deff_r*deff_c*ss_ind 
+cat("Total sample size CRT, baseline period:", ss_crt_b_period) # total sample size for a CRT with baseline period design
+```
+
+```
+## Total sample size CRT, baseline period: 510.8605
+```
+
+```r
+n_clus_crt_b_period <- ss_crt_b_period / cluster_size
+cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total number of clusters for a CRT with baseline period design (divide by arm or sequence/steps if SWCRT)
+```
+
+```
+## Total N clusters CRT, baseline period: 15.48062
+```
+
+```r
+### since I divided my alpha, I can make two comparisons (Intervention 1 vs Usual care & Intervention 2 vs Usual care)
+```
+
+
+# Sample size calculation for parallel CRT with cont outcome (AND baseline period AND closed cohort design) AND multiarm.
+
+Example: EHR nudges for statin prescription CRT
+
+PICO:
+* P: People living with HIV with low-moderate-high CVD risk score and not on a statin
+* I: Statin EHR nudges on provider and participant level
+* C: SOC: No Statin EHR nudges
+* O: nonHDL reduction
+
+Design features:
+* Cluster randomized (SHCS sites)
+* 1:1:1 randomization (stratified by mean statin prescription rate / mean nonHDL)
+* Continuous outcome (15mg/dL nonHDL reduction at 6 months, see guidance)
+* Closed cohort
+* With baseline period. To increase efficiency.
+* 3 arms: 1) SOC, 2) provider nudges, 3) provider+participant nudges
+
+Requirements:
+* power: 90%
+* To avoid adjustment for multiple testing, share alpha for the two comparisons
+* as few clusters as possible, as few participants as possible
+
+Assumptions:
+* SD nonHDL: 44mg/dL (see guidance)
+* Clinically meaningful difference nonHDL: 15mg/dL
+* ICC: 0.15 (conservative)
+* CAC: 1 (since closed cohort, i.e. same individuals)
+* IAC: 0.6 (lower than above since less behavioural)
+
+
+```r
+# Load necessary packages
+library(pwr)
+
+# Define parameters
+alpha <- 0.025  # Adjusted alpha for multiple comparisons (split from 0.05)
+power <- 0.90  # 90% power
 mean_diff <- 15  # Detecting at least a 15 mg/dL reduction in nonHDL cholesterol
 sd <- 44  # Standard deviation of the outcome (non-HDL cholesterol)
 
-cluster_size <- 100  # Average cluster size
+cluster_size <- 14  # Average cluster size
 icc <- 0.15  # Intra-cluster correlation coefficient
-cac <- 0.95  # Cluster autocorrelation (no longer a closed cohort)
-iac <- 0.8  # Individual autocorrelation (correlation between measurements within individuals)
+cac <- 1  # Cluster autocorrelation
+iac <- 0.6  # Individual autocorrelation (correlation between measurements within individuals)
 
 # Calculate the design effect due to clustering
 deff_c <- 1 + (cluster_size - 1) * icc  # Design effect due to clustering
@@ -1479,37 +1579,48 @@ cat("Total sample size individual RCT (per arm):", ss_ind, "\n")
 ```
 
 ```
-## Total sample size individual RCT (per arm): 329.6674
+## Total sample size individual RCT (per arm): 429.6892
 ```
 
 ```r
-# Adjust for clustering (design effect) and repeated measures
-ss_crt_b_period <- deff_r * deff_c * ss_ind
+# Second, inflate for clustering, following a standard parallel 1:1 CRT without repeated measures/baseline period
+ss_crt_standard <- ss_ind * deff_c
+cat("Total sample size CRT, standard:", ss_crt_standard) # total sample size for a standard CRT
+```
 
-# Calculate the number of clusters needed per arm
+```
+## Total sample size CRT, standard: 1267.583
+```
+
+```r
+n_clus_crt_standard <- ss_crt_standard / cluster_size
+cat("Total N clusters CRT, standard:", n_clus_crt_standard) # total number of clusters for a standard CRT (divide by arm or sequence/steps if SWCRT)
+```
+
+```
+## Total N clusters CRT, standard: 90.54165
+```
+
+```r
+# Third, add the baseline period and assume a closed cohort, i.e., 1 repeated measure among the same individuals
+ss_crt_b_period <- deff_r*deff_c*ss_ind 
+cat("Total sample size CRT, baseline period:", ss_crt_b_period) # total sample size for a CRT with baseline period design
+```
+
+```
+## Total sample size CRT, baseline period: 275.3507
+```
+
+```r
 n_clus_crt_b_period <- ss_crt_b_period / cluster_size
-cat("Total N clusters CRT with repeated measures (open cohort, per arm):", n_clus_crt_b_period, "\n")
+cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total number of clusters for a CRT with baseline period design (divide by arm or sequence/steps if SWCRT)
 ```
 
 ```
-## Total N clusters CRT with repeated measures (open cohort, per arm): 5.889836
-```
-
-```r
-# Comparison 1: Arm 1 (usual care) vs Arm 2 (clinician intervention)
-cat("Total clusters for Arm 1 (usual care) vs Arm 2 (clinician intervention):", n_clus_crt_b_period, "\n")
-```
-
-```
-## Total clusters for Arm 1 (usual care) vs Arm 2 (clinician intervention): 5.889836
+## Total N clusters CRT, baseline period: 19.6679
 ```
 
 ```r
-# Comparison 2: Arm 2 (clinician intervention) vs Arm 3 (clinician + patient intervention)
-cat("Total clusters for Arm 2 (clinician intervention) vs Arm 3 (clinician + patient intervention):", n_clus_crt_b_period, "\n")
-```
-
-```
-## Total clusters for Arm 2 (clinician intervention) vs Arm 3 (clinician + patient intervention): 5.889836
+### since I divided my alpha, I can make two comparisons (Intervention 1 vs Usual care & Intervention 2 vs Usual care)
 ```
 
