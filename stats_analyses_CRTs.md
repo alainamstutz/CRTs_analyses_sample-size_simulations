@@ -1445,44 +1445,44 @@ iac <- 0.7  # Individual autocorrelation (correlation between measurements withi
 ss_ind_1arm <- pwr.2p.test(h = ES.h(p_int, p_cont), 
                            sig.level = alpha, 
                            power = power)
-ss_ind <- ss_ind_1arm$n * 2
+ss_ind <- ss_ind_1arm$n * 3
 # cat("Total sample size individual RCT, pwr:", ss_ind)
 
 # Second, inflate for clustering, following a standard parallel 1:1 CRT without repeated measures/baseline period
 ss_crt_standard <- ss_ind * deff_c
-cat("Total sample size CRT, standard:", ss_crt_standard) # total sample size for a standard CRT
+cat("Total sample size CRT, standard:", ss_crt_standard) # total sample size for a standard CRT for 2 comparisons (shared control)
 ```
 
 ```
-## Total sample size CRT, standard: 3988.586
+## Total sample size CRT, standard: 5982.878
 ```
 
 ```r
 n_clus_crt_standard <- ss_crt_standard / cluster_size
-cat("Total N clusters CRT, standard:", n_clus_crt_standard) # total number of clusters for a standard CRT (divide by arm or sequence/steps if SWCRT)
+cat("Total N clusters CRT, standard:", n_clus_crt_standard) # total number of clusters for a standard CRT for 2 comparisons (shared control)
 ```
 
 ```
-## Total N clusters CRT, standard: 120.8662
+## Total N clusters CRT, standard: 181.2993
 ```
 
 ```r
 # Third, add the baseline period and assume a closed cohort, i.e., 1 repeated measure among the same individuals
 ss_crt_b_period <- deff_r*deff_c*ss_ind 
-cat("Total sample size CRT, baseline period:", ss_crt_b_period) # total sample size for a CRT with baseline period design
+cat("Total sample size CRT, baseline period:", ss_crt_b_period) # total sample size for a CRT with baseline period design, for 2 comparisons (shared control)
 ```
 
 ```
-## Total sample size CRT, baseline period: 510.8605
+## Total sample size CRT, baseline period: 766.2908
 ```
 
 ```r
 n_clus_crt_b_period <- ss_crt_b_period / cluster_size
-cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total number of clusters for a CRT with baseline period design (divide by arm or sequence/steps if SWCRT)
+cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total number of clusters for a CRT with baseline period design, for 2 comparisons (shared control)
 ```
 
 ```
-## Total N clusters CRT, baseline period: 15.48062
+## Total N clusters CRT, baseline period: 23.22093
 ```
 
 ```r
@@ -1531,7 +1531,7 @@ power <- 0.90  # 90% power
 mean_diff <- 15  # Detecting at least a 15 mg/dL reduction in nonHDL cholesterol
 sd <- 44  # Standard deviation of the outcome (non-HDL cholesterol)
 
-cluster_size <- 14  # Average cluster size
+cluster_size <- 13  # Average cluster size
 icc <- 0.15  # Intra-cluster correlation coefficient
 cac <- 1  # Cluster autocorrelation
 iac <- 0.6  # Individual autocorrelation (correlation between measurements within individuals)
@@ -1552,44 +1552,44 @@ ss_ind_1arm <- pwr.t.test(d = mean_diff / sd,
                           power = power, 
                           type = "two.sample", 
                           alternative = "two.sided")
-ss_ind <- ss_ind_1arm$n * 2  # Total sample size for one group vs control
+ss_ind <- ss_ind_1arm$n * 2  # Total sample size for 2 comparisons (shared control)
 # cat("Total sample size individual RCT (per arm):", ss_ind, "\n")
 
 # Second, inflate for clustering, following a standard parallel 1:1 CRT without repeated measures/baseline period
 ss_crt_standard <- ss_ind * deff_c
-cat("Total sample size CRT, standard:", ss_crt_standard) # total sample size for a standard CRT
+cat("Total sample size CRT, standard:", ss_crt_standard) # total sample size for a standard CRT, for 2 comparisons (shared control)
 ```
 
 ```
-## Total sample size CRT, standard: 1267.583
+## Total sample size CRT, standard: 1203.13
 ```
 
 ```r
 n_clus_crt_standard <- ss_crt_standard / cluster_size
-cat("Total N clusters CRT, standard:", n_clus_crt_standard) # total number of clusters for a standard CRT (divide by arm or sequence/steps if SWCRT)
+cat("Total N clusters CRT, standard:", n_clus_crt_standard) # total number of clusters for a standard CRT, for 2 comparisons
 ```
 
 ```
-## Total N clusters CRT, standard: 90.54165
+## Total N clusters CRT, standard: 92.54844
 ```
 
 ```r
 # Third, add the baseline period and assume a closed cohort, i.e., 1 repeated measure among the same individuals
 ss_crt_b_period <- deff_r*deff_c*ss_ind 
-cat("Total sample size CRT, baseline period:", ss_crt_b_period) # total sample size for a CRT with baseline period design
+cat("Total sample size CRT, baseline period:", ss_crt_b_period) # total sample size for a CRT with baseline period design, for 2 comparisons (shared control)
 ```
 
 ```
-## Total sample size CRT, baseline period: 275.3507
+## Total sample size CRT, baseline period: 274.4486
 ```
 
 ```r
 n_clus_crt_b_period <- ss_crt_b_period / cluster_size
-cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total number of clusters for a CRT with baseline period design (divide by arm or sequence/steps if SWCRT)
+cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total number of clusters for a CRT with baseline period design, for 2 comparisons (shared control)
 ```
 
 ```
-## Total N clusters CRT, baseline period: 19.6679
+## Total N clusters CRT, baseline period: 21.11143
 ```
 
 ```r
