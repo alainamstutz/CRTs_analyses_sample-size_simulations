@@ -342,16 +342,15 @@ ss_ind_1arm <- pwr.2p.test(h = ES.h(p_int, p_cont),
                            sig.level = alpha, 
                            power = power)
 ss_ind <- ss_ind_1arm$n * 2
-cat("Total sample size individual RCT, pwr:", ss_ind)
+# cat("Total sample size individual RCT, pwr:", ss_ind)
 # cat("Total sample size individual RCT, pwr:", round(ss_ind, 0))
-
 
 ## As a comparison, use "manual" formula instead of pwr package
 Z_alpha_half <- qnorm(1 - alpha / 2) # translate into Z-distribution -> equals 0.975 (95% CI) 
 Z_beta <- qnorm(power)
 ss_ind_1arm_man <- ((Z_alpha_half + Z_beta)^2 * (p_int * (1 - p_int) + p_cont * (1 - p_cont))) / (p_int - p_cont)^2
 ss_ind_man <- ss_ind_1arm_man * 2
-cat("Total sample size individual RCT, manual:", ss_ind_man) # total sample size
+# cat("Total sample size individual RCT, manual:", ss_ind_man) # total sample size
 # => same result, use pwr result going forward
 
 
@@ -548,7 +547,7 @@ ss_ind_1arm <- pwr.2p.test(h = ES.h(p_int, p_cont),
                            sig.level = alpha, 
                            power = power)
 ss_ind <- ss_ind_1arm$n * 2
-cat("Total sample size individual RCT, pwr:", ss_ind)
+# cat("Total sample size individual RCT, pwr:", ss_ind)
 
 # Second, inflate for clustering, following a standard parallel 1:1 CRT without repeated measures/baseline period
 ss_crt_standard <- ss_ind * deff_c
@@ -630,8 +629,7 @@ ss_ind_1arm <- pwr.t.test(d = mean_diff / sd,
                           type = "two.sample", 
                           alternative = "two.sided")
 ss_ind <- ss_ind_1arm$n * 2  # Total sample size for one group vs control
-
-cat("Total sample size individual RCT (per arm):", ss_ind, "\n")
+# cat("Total sample size individual RCT (per arm):", ss_ind, "\n")
 
 # Second, inflate for clustering, following a standard parallel 1:1 CRT without repeated measures/baseline period
 ss_crt_standard <- ss_ind * deff_c
