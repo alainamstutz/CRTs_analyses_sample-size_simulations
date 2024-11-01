@@ -1427,9 +1427,6 @@ Assumptions:
 
 
 ```r
-# Load necessary packages
-library(pwr)
-
 # Define parameters
 alpha <- 0.025  # Adjusted alpha for multiple comparisons (split from 0.05)
 power <- 0.90  # 90% power
@@ -1522,9 +1519,6 @@ Assumptions:
 
 
 ```r
-# Load necessary packages
-library(pwr)
-
 # Define parameters
 alpha <- 0.025  # Adjusted alpha for multiple comparisons (split from 0.05)
 power <- 0.90  # 90% power
@@ -1596,3 +1590,42 @@ cat("Total N clusters CRT, baseline period:", n_clus_crt_b_period) # total numbe
 ### since I divided my alpha, I can make two comparisons (Intervention 1 vs Usual care & Intervention 2 vs Usual care)
 ```
 
+# Sample Size calculation for a pilot and feasibilty study, according to "Guidelines for Designing and Evaluating Feasibility Pilot Studies"
+(https://pmc.ncbi.nlm.nih.gov/articles/PMC8849521/)
+1) The aim of the sample size calculation is to calculate the CI around the single proportion of PrEP uptake within 6 months in our pilot, to inform the larger cluster randomized trial
+2) We take into account the clustering of the data, i.e., clusters = stylists with several clients
+3) Target population: Young women attending a hair salon in Lesotho, sexually active, HIV-
+4) Estimated demand of PrEP: Based on the data from our citizen scientist survey -> 22.1% were interested in taking up PrEP when offered
+5) 95% confidence: The probability that our sample results will be within the margin of error of the true population estimate.
+6) Margin of error (precision): 10%. The maximum acceptable difference between our sample estimate and the true population parameter. If we find that 22.1% of our participating clients take up PrEP, we can assume that 12.1-32.1% of our target population will do so.
+7) Estimate the intracluster correlation coefficient (ICC): The ICC measures the similarity or correlation between responses within the same cluster. A higher ICC (closer to 1) implies more similarity (i.e. more correlation). Based on the ICC, the design effect (or inflation factor), is calculated. We calculated the ICC from our citizen scientist survey data -> 0.06543012
+8) Due to operational/budget and piloting reasons: as few clusters as possible
+
+
+```r
+# Define parameters
+confidence_level <- 0.95 # confidence level
+z <- qnorm(1 - (1 - confidence_level) / 2) # z statistic
+d <- 0.10 # margin of error
+cluster_size <- 15 # Average cluster size (fixed in our case)
+icc <- 0.06543012 # Intracluster correlation coefficient -> from the survey
+prop <- 0.221 # Estimated proportion (= 22.1% demand) -> from the survey
+deff <- 1 + (cluster_size - 1) * icc # Design Effect
+sample_size <- ceiling((z^2 * prop * (1 - prop) * deff) / d^2)
+# Number of individual participants
+cat("Required sample size:", sample_size)
+```
+
+```
+## Required sample size: 127
+```
+
+```r
+# Number of clusters
+n_clusters <- sample_size / cluster_size
+cat("Required clusters:", round(n_clusters, 0))
+```
+
+```
+## Required clusters: 8
+```
