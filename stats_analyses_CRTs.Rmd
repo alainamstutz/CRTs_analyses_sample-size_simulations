@@ -669,3 +669,32 @@ cat("Required sample size:", sample_size)
 n_clusters <- sample_size / cluster_size
 cat("Required clusters:", round(n_clusters, 0))
 ```
+
+# R21/R33: Sample Size calculation for R21/R33 Vending machines proposal
+## according to "Guidelines for Designing and Evaluating Feasibility Pilot Studies"
+(https://pmc.ncbi.nlm.nih.gov/articles/PMC8849521/)
+1) The aim of the sample size calculation is to calculate the CI around the single proportion of participants at high HIV acquisition risk accessing HIVST at a vending machine and link to the clinic within 3 months
+2) We take into account the clustering of the data, i.e., clusters = vending machines with several participants
+3) Target population: Participants accessing one of the vending machines at high HIV acquisition risk (epi 3+ risk score)
+4) Based on previous data, we know there are ca. 20'000 campus students, 12'000 sexually active and 8000 of these with a high epi risk score. We expect to at least reach 5% of them to access one of our 6 machines (ca. 70 per machine) and among these reaching ca. 35%.
+5) confidence interval set to 95%: The probability that our sample results will be within the margin of error of the true population estimate.
+6) Margin of error (precision) set to 10%. The maximum acceptable difference between our sample estimate and the true population parameter.
+7) Estimate the intracluster correlation coefficient (ICC): The ICC measures the similarity or correlation between responses within the same cluster. A higher ICC (closer to 1) implies more similarity (i.e. more correlation). Based on the ICC, the design effect (or inflation factor), is calculated. There is no reason to assume high correlation.
+8) Due to operational/budget and piloting reasons: as few clusters as possible
+
+```{r message=FALSE, warning=FALSE}
+# Define parameters
+confidence_level <- 0.95 # confidence level
+z <- qnorm(1 - (1 - confidence_level) / 2) # z statistic
+d <- 0.10 # margin of error
+cluster_size <- 70 # Average cluster size
+icc <- 0.05 # Intracluster correlation coefficient
+prop <- 0.35 # Estimated proportion (= 35% reach)
+deff <- 1 + (cluster_size - 1) * icc # Design Effect
+sample_size <- ceiling((z^2 * prop * (1 - prop) * deff) / d^2)
+# Number of individual participants
+cat("Required sample size:", sample_size)
+# Number of clusters
+n_clusters <- sample_size / cluster_size
+cat("Required clusters:", round(n_clusters, 0))
+```
